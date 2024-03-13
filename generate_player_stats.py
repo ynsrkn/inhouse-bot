@@ -264,6 +264,9 @@ class PlayerHistoricalStats:
     averageDamageDealt = 0
     winrate = 0
     matchHistory = []
+    totalGameDuration = 0
+    totalCs = 0
+    csPerMin = 0
     def __init__(self, playerName: str) -> None:
         self.matchHistory = []
         self.playerName = playerName
@@ -271,6 +274,7 @@ class PlayerHistoricalStats:
         self.opponents = {}
 
     def add_game_stats(self, game_stats: PlayerGameStats) -> None:
+        self.totalCs += game_stats.cs
         self.totalKills += game_stats.kills
         self.totalDeaths += game_stats.deaths
         self.totalAssists += game_stats.assists
@@ -323,6 +327,10 @@ class PlayerHistoricalStats:
             self.track_teammate_stats(playerGameStats.win, game.team1, game.team2)
         else:
             self.track_teammate_stats(playerGameStats.win, game.team2, game.team1)
+
+        # track CS/min
+        self.totalGameDuration += game.gameDuration
+        self.csPerMin = round(self.totalCs / self.totalGameDuration * 60, 1)
 
     def __str__(self) -> str:
         res = ""

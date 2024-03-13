@@ -36,15 +36,28 @@ async def get_profile(ctx, player_name: str):
     embed.add_field(
         name=f"**{p_stats.wins}W {p_stats.losses}L**\n",            
         value=f"{p_stats.winrate}% Win Rate",
-        inline=False
+        inline=True
     )
     embed.add_field(
-        name=f"{'KDA':30}",
+        name="KDA",
         value=f"{p_stats.avgKills} / {p_stats.avgDeaths} / {p_stats.avgAssists} ({p_stats.totalkda})",
-        inline=False
+        inline=True
+    )
+    # empty field for spacing
+    embed.add_field(name="", value="", inline=False)
+
+    embed.add_field(
+        name="CS/min",
+        value=f"{p_stats.csPerMin}",
+        inline=True
+    )
+    embed.add_field(
+        name="Average Damage Dealt",
+        value=f"{p_stats.averageDamageDealt:,}",
+        inline=True
     )
 
-    table_header = f"```{'ID':5}{'Result':10}{'Champion':13}{'KDA':8}```\n"
+    table_header = f"```{'ID':5}{'Result':10}{'Champion':13}{'KDA':8}```"
     body = "```"
     for match in p_stats.matchHistory[:20]:
         body += str(match.gameId).ljust(5)
@@ -53,7 +66,7 @@ async def get_profile(ctx, player_name: str):
         body += f"{match.kills}/{match.deaths}/{match.assists}"
         body += "\n"
     body += "```"
-    embed.add_field(name="**Match History:**", value=table_header + body)
+    embed.add_field(name="**Match History:**", value=table_header + body, inline=False)
 
     await ctx.respond(embed=embed)
 
