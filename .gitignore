@@ -1,0 +1,4 @@
+bot-env/
+__pycache__/
+
+secrets.json
