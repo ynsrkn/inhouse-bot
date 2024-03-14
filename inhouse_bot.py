@@ -106,10 +106,18 @@ async def get_synergy(ctx, player1: str, player2: str):
     if p_stats is None:
         await ctx.respond(embed=discord.Embed(title=f"Couldn't find {player1}."))
         return
+    p2_stats = stats.get(player2)
+    if p2_stats is None:
+        await ctx.respond(embed=discord.Embed(title=f"Couldn't find {player2}."))
+        return
     
     synergy = p_stats.teammates.get(player2)
     if synergy is None:
         await ctx.respond(embed=discord.Embed(title=f"Either {player1} has not played any games with {player2} or their name was mistyped."))
+        return
+    p2_synergy = p2_stats.teammates.get(player1)
+    if synergy is None:
+        await ctx.respond(embed=discord.Embed(title=f"Either {player2} has not played any games with {player1} or their name was mistyped."))
         return
 
     embed = discord.Embed(
@@ -117,7 +125,8 @@ async def get_synergy(ctx, player1: str, player2: str):
     )
 
     body = ""
-    body += f"Thats {abs(p_stats.winrate - synergy.winrate)}% {'higher' if synergy.winrate >= p_stats.winrate else 'lower'} than normal.\n"
+    body += f"Thats **{abs(p_stats.winrate - synergy.winrate)}% {'higher' if synergy.winrate >= p_stats.winrate else 'lower'}** than normal for `{player1}` "
+    body += f"and **{abs(p2_stats.winrate - p2_synergy.winrate)}% {'higher' if p2_synergy.winrate >= p2_stats.winrate else 'lower'}** than normal for `{player2}`.\n"
     body += f"**{synergy.wins}W {synergy.losses}L**"
     embed.add_field(
         name=f"`{player1}` wins `{synergy.winrate}%` of the time when playing with `{player2}`.",
