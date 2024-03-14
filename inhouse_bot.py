@@ -81,16 +81,16 @@ async def get_leaderboard(ctx):
     embed = discord.Embed(
         title=f"Inhouses Leaderboard"
     )
-    table_header = f"```{'Rank':7}{'Name':22}{'Wins':7}{'Losses':8}{'Winrate':10}```"
-    table_body = "```\n"
+    table_header = f"```{'Rank':5}{'Name':18}{'Wins':6}{'Losses':7}{'Winrate':<7}```"
+    table_body = "```"
     rows = sorted(stats.values(), reverse=True, key=lambda x: (x.wins - x.losses, x.gamesPlayed, x.winrate))
     for i, row in enumerate(rows):
         table_body += f"{i + 1}".ljust(5)
-        table_body += f"{row.playerName:15}"
-        table_body += f"{row.wins:5}{row.losses:6}{row.winrate:10}%"
+        table_body += f"{row.playerName:18}"
+        table_body += f"{row.wins:<6}{row.losses:<7}{row.winrate:>3}%"
         table_body += "\n"
     table_body += '```'
-    embed.add_field(name=table_header, value=table_body)
+    embed.add_field(name="", value=table_header + table_body)
 
     await ctx.respond(embed=embed)
 
