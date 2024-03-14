@@ -26,7 +26,7 @@ async def get_profile(ctx, player_name: str):
 
     p_stats = stats.get(player_name)
     if p_stats is None:
-        await ctx.respond(embed=discord.Embed(title="Couldn't find {player_name}"))
+        await ctx.respond(embed=discord.Embed(title=f"Couldn't find {player_name}"))
         return
 
     embed = discord.Embed(
@@ -210,7 +210,8 @@ async def match_details(ctx, match_id: int):
 async def update(ctx):
     logging.info("Received UPDATE request")
 
-    match_history = load_games("matches/")
+    global match_history, stats
+    match_history= load_games("matches/")
     stats = track_player_stats(match_history)
     await ctx.respond(embed=discord.Embed(title="Stats updated!"))
 

@@ -358,13 +358,12 @@ def track_player_stats(games):
 
 def load_games(dir_path):
     games = []
-    for matchFileName in os.listdir(dir_path):
+    for i, matchFileName in enumerate(os.listdir(dir_path)):
         data = {}
         with open(dir_path + matchFileName, 'r') as fh:
             data = json.load(fh)
         
-        gameId = int(re.findall("\d+", matchFileName)[0])
-        games.append(Game(gameId, data))
+        games.append(Game(i + 1, data))
     
     games.sort(key=lambda x: x.id)
 

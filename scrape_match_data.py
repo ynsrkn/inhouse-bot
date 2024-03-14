@@ -40,7 +40,7 @@ if __name__ == "__main__":
     # get each match data
     for i, riotGameId in enumerate(riotGameIds[::-1]):
         matchId = len(os.listdir("matches/")) + 1
-        matchFileName = f"matches/match-{matchId}.json"
+        matchFileName = f"matches/match-{riotGameId}.json"
         if not os.path.exists(matchFileName):
             logging.info(f"Getting data for riotGameId: {riotGameId}, matchId: {matchId}")
             response = requests.get(
