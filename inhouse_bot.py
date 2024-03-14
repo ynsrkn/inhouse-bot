@@ -24,13 +24,13 @@ match_history = None
 async def get_profile(ctx, player_name: str):
     logging.info(f"Received PROFILE request player_name={player_name}")
 
-    p_stats = stats.get(player_name)
+    p_stats = stats.get(player_name.lower())
     if p_stats is None:
         await ctx.respond(embed=discord.Embed(title=f"Couldn't find {player_name}"))
         return
 
     embed = discord.Embed(
-        title=f"{player_name} Profile",
+        title=f"{p_stats.playerDisplayName} Profile",
     )
 
     embed.add_field(
@@ -86,7 +86,7 @@ async def get_leaderboard(ctx):
     rows = sorted(stats.values(), reverse=True, key=lambda x: (x.wins - x.losses, x.gamesPlayed, x.winrate))
     for i, row in enumerate(rows):
         table_body += f"{i + 1}".ljust(5)
-        table_body += f"{row.playerName:18}"
+        table_body += f"{row.playerDisplayName:18}"
         table_body += f"{row.wins:<6}{row.losses:<7}{row.winrate:>3}%"
         table_body += "\n"
     table_body += '```'
@@ -102,34 +102,37 @@ async def get_leaderboard(ctx):
 async def get_synergy(ctx, player1: str, player2: str):
     logging.info(f"Received SYNERGY request player1={player1}, player2={player2}")
 
-    p_stats = stats.get(player1)
+    player1_key = player1.lower()
+    player2_key = player2.lower()
+    
+    p_stats = stats.get(player1_key)
     if p_stats is None:
         await ctx.respond(embed=discord.Embed(title=f"Couldn't find {player1}."))
         return
-    p2_stats = stats.get(player2)
+    p2_stats = stats.get(player2_key)
     if p2_stats is None:
         await ctx.respond(embed=discord.Embed(title=f"Couldn't find {player2}."))
         return
     
-    synergy = p_stats.teammates.get(player2)
+    synergy = p_stats.teammates.get(player2_key)
     if synergy is None:
         await ctx.respond(embed=discord.Embed(title=f"Either {player1} has not played any games with {player2} or their name was mistyped."))
         return
-    p2_synergy = p2_stats.teammates.get(player1)
+    p2_synergy = p2_stats.teammates.get(player1_key)
     if synergy is None:
         await ctx.respond(embed=discord.Embed(title=f"Either {player2} has not played any games with {player1} or their name was mistyped."))
         return
 
     embed = discord.Embed(
-        title=f"Synergy between `{player1}` and `{player2}`"
+        title=f"Synergy between `{p_stats.playerDisplayName}` and `{p2_stats.playerDisplayName}`"
     )
 
     body = ""
-    body += f"Thats **{abs(p_stats.winrate - synergy.winrate)}% {'higher' if synergy.winrate >= p_stats.winrate else 'lower'}** than normal for `{player1}` "
-    body += f"and **{abs(p2_stats.winrate - p2_synergy.winrate)}% {'higher' if p2_synergy.winrate >= p2_stats.winrate else 'lower'}** than normal for `{player2}`.\n"
+    body += f"Thats **{abs(p_stats.winrate - synergy.winrate)}% {'higher' if synergy.winrate >= p_stats.winrate else 'lower'}** than normal for `{p_stats.playerDisplayName}` "
+    body += f"and **{abs(p2_stats.winrate - p2_synergy.winrate)}% {'higher' if p2_synergy.winrate >= p2_stats.winrate else 'lower'}** than normal for `{p2_stats.playerDisplayName}`.\n"
     body += f"**{synergy.wins}W {synergy.losses}L**"
     embed.add_field(
-        name=f"`{player1}` wins `{synergy.winrate}%` of the time when playing with `{player2}`.",
+        name=f"`{p_stats.playerDisplayName}` wins `{synergy.winrate}%` of the time when playing with `{p2_stats.playerDisplayName}`.",
         value=body,
         inline=False
     )
@@ -144,25 +147,28 @@ async def get_synergy(ctx, player1: str, player2: str):
 async def get_versus(ctx, player1: str, player2: str):
     logging.info(f"Received VERSUS request player1={player1}, player2={player2}")
 
-    p_stats = stats.get(player1)
+    player1_key = player1.lower()
+    player2_key = player2.lower()
+
+    p_stats = stats.get(player1_key)
     if p_stats is None:
         await ctx.respond(embed=discord.Embed(title=f"Couldn't find {player1}."))
         return
     
-    versus = p_stats.opponents.get(player2)
+    versus = p_stats.opponents.get(player2_key)
     if versus is None:
         await ctx.respond(embed=discord.Embed(title=f"Either {player1} has not played any games against {player2} or their name was mistyped."))
         return
 
     embed = discord.Embed(
-        title=f"Versus between `{player1}` and `{player2}`"
+        title=f"Versus between `{p_stats.playerDisplayName}` and `{versus.playerDisplayName}`"
     )
 
     body = ""
     body += f"Thats {abs(p_stats.winrate - versus.winrate)}% {'higher' if versus.winrate >= p_stats.winrate else 'lower'} than normal.\n"
     body += f"**{versus.wins}W {versus.losses}L**"
     embed.add_field(
-        name=f"`{player1}` wins `{versus.winrate}%` of the time when playing against `{player2}`.",
+        name=f"`{p_stats.playerDisplayName}` wins `{versus.winrate}%` of the time when playing against `{versus.playerDisplayName}`.",
         value=body,
         inline=False
     )
@@ -192,7 +198,7 @@ async def match_details(ctx, match_id: int):
     for name, team in [("BLUE", match_info.team1), ("RED", match_info.team2)]:
         body = "```"
         for player in team:
-            body += f"{player.playerName:16}"
+            body += f"{player.playerDisplayName:16}"
             body += f"{player.championName:13}"
             body += f"{player.kills}/{player.deaths}/{player.assists}".ljust(10)
             body += f"{player.cs:<6}"
