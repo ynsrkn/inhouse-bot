@@ -178,7 +178,8 @@ class PlayerGameStats:
     def __init__(self, raw_stats, pmap, gameId) -> None:
         self.gameId = gameId
         self.playerId = raw_stats['participantId']
-        self.playerName = pmap[self.playerId]
+        self.playerName = pmap[self.playerId].lower()
+        self.playerDisplayName = pmap[self.playerId]
         self.championId = raw_stats['championId']
         self.championName = champ_id_map[self.championId]
         self.cs = raw_stats['stats']['totalMinionsKilled'] + raw_stats['stats']['neutralMinionsKilled']
@@ -233,7 +234,8 @@ class Game:
         return res
 
 class Teammate:
-    def __init__(self) -> None:
+    def __init__(self, playerDisplayName: str) -> None:
+        self.playerDisplayName = playerDisplayName
         self.wins = 0
         self.losses = 0
         self.gamesPlayed = 0
@@ -267,9 +269,10 @@ class PlayerHistoricalStats:
     totalGameDuration = 0
     totalCs = 0
     csPerMin = 0
-    def __init__(self, playerName: str) -> None:
+    def __init__(self, playerName: str, playerDisplayName: str) -> None:
         self.matchHistory = []
         self.playerName = playerName
+        self.playerDisplayName = playerDisplayName
         self.teammates = {}
         self.opponents = {}
 
@@ -303,23 +306,23 @@ class PlayerHistoricalStats:
                     continue
 
                 if self.teammates.get(teammate.playerName) is None:
-                    self.teammates[teammate.playerName] = Teammate()
+                    self.teammates[teammate.playerName] = Teammate(teammate.playerDisplayName)
                 
                 self.teammates[teammate.playerName].add_game(win)
             
             for opponent in opponents:
                 if self.opponents.get(opponent.playerName) is None:
-                    self.opponents[opponent.playerName] = Teammate()
+                    self.opponents[opponent.playerName] = Teammate(opponent.playerDisplayName)
                 
                 self.opponents[opponent.playerName].add_game(win)
     
-    def add_game(self, playerName: str, game: Game, playerGameStats: PlayerGameStats) -> None:
+    def add_game(self, game: Game, playerGameStats: PlayerGameStats) -> None:
         self.add_game_stats(playerGameStats)
 
         # track teammate and opponent information
         playerTeam = 1
         for player in game.team2:
-            if player.playerName == playerName:
+            if player.playerName == self.playerName:
                 playerTeam = 2
                 break
         
@@ -348,11 +351,12 @@ def track_player_stats(games):
     for game in games:
         for playerGameStats in game.players:
             playerName = playerGameStats.playerName
+            playerDisplayName = playerGameStats.playerDisplayName
             
             if playerName not in playerStats:
-                playerStats[playerName] = PlayerHistoricalStats(playerName)
+                playerStats[playerName] = PlayerHistoricalStats(playerName, playerDisplayName)
             
-            playerStats[playerName].add_game(playerName, game, playerGameStats)
+            playerStats[playerName].add_game( game, playerGameStats)
 
     return playerStats
 
