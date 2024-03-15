@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands
+from generate_player_stats import Game, PlayerGameStats, PlayerHistoricalStats, Teammate, ChampionStats
 from generate_player_stats import track_player_stats, load_games
 import logging
 import json
@@ -55,6 +56,33 @@ async def get_profile(ctx, player_name: str):
         name="Average Damage Dealt",
         value=f"{p_stats.averageDamageDealt:,}",
         inline=True
+    )
+
+    # Champion stats    
+    DISPLAY_NUMBER = 5
+
+    # determines sorting order for top champion stats
+    def champStatsComparison(stats: ChampionStats):
+        return (stats.gamesPlayed, stats.winrate, stats.avgkda)
+    
+    top_champs = sorted(p_stats.championStats.values(), key=champStatsComparison, reverse=True)
+    body = "```"
+    for i, champ in enumerate(top_champs[:DISPLAY_NUMBER]):
+        body += f"{i + 1}. {champ.championName}".ljust(18)
+        body += f"{champ.avgkda} KDA".ljust(13)
+        body += f"{champ.winrate}% WR".rjust(8)
+        body += "\n"
+        # next line
+        body += " " * 16 # spacer
+        body += f"{champ.avgKills}/{champ.avgDeaths}/{champ.avgAssists}".ljust(15)
+        body += f"{champ.gamesPlayed} game{'s' if champ.gamesPlayed > 1 else ''}".rjust(8)
+        body += "\n"
+    body += "```"
+
+    embed.add_field(
+        name=f"**Champion Stats (Top {DISPLAY_NUMBER})**",
+        value=body,
+        inline=False
     )
 
     table_header = f"```{'ID':5}{'Result':10}{'Champion':13}{'KDA':8}```"
