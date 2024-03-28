@@ -83,12 +83,12 @@ async def get_profile(ctx, player_name: str):
         body = "```"
         for champ in chunk:
             body += f"{rank}. {champ.championName}".ljust(18)
-            body += f"{champ.avgkda} KDA".ljust(13)
+            body += f"{champ.avgkda} KDA".ljust(15)
             body += f"{champ.winrate}% WR".rjust(8)
             body += "\n"
             # next line
             body += " " * 16 # spacer
-            body += f"{champ.avgKills}/{champ.avgDeaths}/{champ.avgAssists}".ljust(15)
+            body += f"{champ.avgKills}/{champ.avgDeaths}/{champ.avgAssists}".ljust(17)
             body += f"{champ.gamesPlayed} game{'s' if champ.gamesPlayed > 1 else ''}".rjust(8)
             body += "\n"
             rank += 1
