@@ -1,5 +1,6 @@
 import discord
 from discord.ext import commands, pages
+from discord.utils import basic_autocomplete
 from generate_player_stats import Game, PlayerGameStats, PlayerHistoricalStats, Teammate, ChampionStats
 from generate_player_stats import track_player_stats, load_games
 from utils import chunks
@@ -20,12 +21,19 @@ stats: dict[PlayerGameStats] = None
 # match history
 match_history: list[Match] = None
 
+async def _get_player_list(ctx: discord.AutocompleteContext):
+    return sorted(list(map(lambda x: x.playerDisplayName, stats.values())))
+
 @bot.slash_command(
     name="profile",
     description="Get a summoners profile.",
     guild_ids=GUILD_IDS
 )
-async def get_profile(ctx, player_name: str):
+async def get_profile(
+        ctx: discord.ApplicationContext,
+        player_name: discord.Option(str, autocomplete=basic_autocomplete(_get_player_list))
+    ):
+
     logging.info(f"Received PROFILE request player_name={player_name}")
 
     p_stats = stats.get(player_name.lower())
@@ -140,15 +148,19 @@ async def get_profile(ctx, player_name: str):
             pg.append(match_hist_pages[-1])
         page_list.append(pg)
 
-    paginator = pages.Paginator(pages=page_list, loop_pages=True)
-    await paginator.respond(ctx.interaction)
+    paginator = pages.Paginator(pages=page_list, loop_pages=True, author_check=False, timeout=None)
+    await paginator.respond(ctx.interaction, ephemeral=False)
+
 
 @bot.slash_command(
     name="leaderboard",
     description="Display leaderboard.",
     guild_ids=GUILD_IDS
 )
-async def get_leaderboard(ctx):
+async def get_leaderboard(
+        ctx: discord.ApplicationContext
+    ):
+
     logging.info(f"Received LEADERBOARD request")
 
     leaderboard = sorted(stats.values(), reverse=True, key=lambda x: x.mmr.mu)
@@ -174,7 +186,7 @@ async def get_leaderboard(ctx):
         
         page_list.append(embed)
 
-    paginator = pages.Paginator(pages=page_list, loop_pages=True)
+    paginator = pages.Paginator(pages=page_list, loop_pages=True, author_check=False, timeout=None)
     await paginator.respond(ctx.interaction)
 
 @bot.slash_command(
@@ -182,7 +194,12 @@ async def get_leaderboard(ctx):
     description="Get the winrate of two players when on the same team.",
     guild_ids=GUILD_IDS
 )
-async def get_synergy(ctx, player1: str, player2: str):
+async def get_synergy(
+        ctx: discord.ApplicationContext,
+        player1: discord.Option(str, autocomplete=basic_autocomplete(_get_player_list)),
+        player2: discord.Option(str, autocomplete=basic_autocomplete(_get_player_list))
+    ):
+
     logging.info(f"Received SYNERGY request player1={player1}, player2={player2}")
 
     player1_key = player1.lower()
@@ -227,7 +244,12 @@ async def get_synergy(ctx, player1: str, player2: str):
     description="Get the winrate of player1 when against player2.",
     guild_ids=GUILD_IDS
 )
-async def get_versus(ctx, player1: str, player2: str):
+async def get_versus(
+        ctx: discord.ApplicationContext,
+        player1: discord.Option(str, autocomplete=basic_autocomplete(_get_player_list)),
+        player2: discord.Option(str, autocomplete=basic_autocomplete(_get_player_list))
+    ):
+
     logging.info(f"Received VERSUS request player1={player1}, player2={player2}")
 
     player1_key = player1.lower()
