@@ -1,7 +1,8 @@
 import discord
-from discord.ext import commands
+from discord.ext import commands, pages
 from generate_player_stats import Game, PlayerGameStats, PlayerHistoricalStats, Teammate, ChampionStats
 from generate_player_stats import track_player_stats, load_games
+from utils import chunks
 import logging
 import json
 
@@ -32,75 +33,115 @@ async def get_profile(ctx, player_name: str):
         await ctx.respond(embed=discord.Embed(title=f"Couldn't find {player_name}"))
         return
 
-    embed = discord.Embed(
+    MIN_EMBED_WIDTH = 48
+    profile_embed = discord.Embed(
         title=f"{p_stats.playerDisplayName} Profile",
+        description="⎯" * MIN_EMBED_WIDTH
     )
 
-    embed.add_field(
+    profile_embed.add_field(
         name=f"**{p_stats.mmr.mu:.0f} MMR**\n",            
         value=f"{p_stats.wins}W {p_stats.losses}L {p_stats.winrate}% WR",
         inline=True
     )
-    embed.add_field(
+    profile_embed.add_field(
         name="KDA",
         value=f"{p_stats.avgKills} / {p_stats.avgDeaths} / {p_stats.avgAssists} ({p_stats.totalkda})",
         inline=True
     )
     # empty field for spacing
-    embed.add_field(name="", value="", inline=False)
+    profile_embed.add_field(name="", value="", inline=False)
 
-    embed.add_field(
+    profile_embed.add_field(
         name="CS/min",
         value=f"{p_stats.csPerMin}",
         inline=True
     )
-    embed.add_field(
+    profile_embed.add_field(
         name="Average Damage Dealt",
         value=f"{p_stats.averageDamageDealt:,}",
         inline=True
     )
 
-    # Champion stats    
-    DISPLAY_NUMBER = 5
+    # Champion stats
 
     # determines sorting order for top champion stats
     def champStatsComparison(stats: ChampionStats):
         return (stats.gamesPlayed, stats.winrate, stats.avgkda)
     
     top_champs = sorted(p_stats.championStats.values(), key=champStatsComparison, reverse=True)
-    body = "```"
-    for i, champ in enumerate(top_champs[:DISPLAY_NUMBER]):
-        body += f"{i + 1}. {champ.championName}".ljust(18)
-        body += f"{champ.avgkda} KDA".ljust(13)
-        body += f"{champ.winrate}% WR".rjust(8)
-        body += "\n"
-        # next line
-        body += " " * 16 # spacer
-        body += f"{champ.avgKills}/{champ.avgDeaths}/{champ.avgAssists}".ljust(15)
-        body += f"{champ.gamesPlayed} game{'s' if champ.gamesPlayed > 1 else ''}".rjust(8)
-        body += "\n"
-    body += "```"
+    
+    PAGE_SIZE = 5
+    champions_pages = []
+    rank = 1
+    for chunk in chunks(top_champs, PAGE_SIZE):
+        champions_embed = discord.Embed(
+            title="Champion Stats",
+            description="⎯" * MIN_EMBED_WIDTH
+        )
 
-    embed.add_field(
-        name=f"**Champion Stats (Top {DISPLAY_NUMBER})**",
-        value=body,
-        inline=False
-    )
+        body = "```"
+        for champ in chunk:
+            body += f"{rank}. {champ.championName}".ljust(18)
+            body += f"{champ.avgkda} KDA".ljust(15)
+            body += f"{champ.winrate}% WR".rjust(8)
+            body += "\n"
+            # next line
+            body += " " * 16 # spacer
+            body += f"{champ.avgKills}/{champ.avgDeaths}/{champ.avgAssists}".ljust(17)
+            body += f"{champ.gamesPlayed} game{'s' if champ.gamesPlayed > 1 else ''}".rjust(8)
+            body += "\n"
+            rank += 1
+        body += "```"
 
-    table_header = f"```{'ID':5}{'Result':10}{'Champion':13}{'KDA':10}{'MMR ±':6}```"
-    body = "```"
-    for match in p_stats.matchHistory[:20]:
-        matchStats = match.gameStats
-        body += str(matchStats.gameId).ljust(5)
-        body += f"{'Victory' if matchStats.win else 'Defeat':10}"
-        body += f"{matchStats.championName:13}"
-        body += f"{matchStats.kills}/{matchStats.deaths}/{matchStats.assists}".ljust(10)
-        body += f"{'+' if match.mmrDelta >= 0 else ''}{match.mmrDelta:.0f}".ljust(6)
-        body += "\n"
-    body += "```"
-    embed.add_field(name="**Match History:**", value=table_header + body, inline=False)
+        champions_embed.add_field(
+            name=f"",
+            value=body,
+            inline=False
+        )
 
-    await ctx.respond(embed=embed)
+        champions_pages.append(champions_embed)
+
+    # Player Match History
+
+    PAGE_SIZE = 20
+    match_hist_pages = []
+    for i, chunk in enumerate(chunks(p_stats.matchHistory, PAGE_SIZE)):
+        page_embed = discord.Embed(
+            title="Match History",
+            description="⎯" * MIN_EMBED_WIDTH
+        )
+        table_header = f"```{'ID':5}{'Result':10}{'Champion':13}{'KDA':10}{'MMR ±':6}```"
+        body = "```"
+        for match in chunk:
+            matchStats = match.gameStats
+            body += str(matchStats.gameId).ljust(5)
+            body += f"{'Victory' if matchStats.win else 'Defeat':10}"
+            body += f"{matchStats.championName:13}"
+            body += f"{matchStats.kills}/{matchStats.deaths}/{matchStats.assists}".ljust(10)
+            body += f"{'+' if match.mmrDelta >= 0 else ''}{match.mmrDelta:.0f}".ljust(6)
+            body += "\n"
+        body += "```"
+
+        page_embed.add_field(name="", value=table_header + body, inline=False)
+
+        match_hist_pages.append(page_embed)
+    
+    page_list = []
+    for i in range(max(len(champions_pages), len(match_hist_pages))):
+        pg = [profile_embed]
+        if i < len(champions_pages):
+            pg.append(champions_pages[i])
+        else:
+            pg.append(champions_pages[-1])
+        if i < len(match_hist_pages):
+            pg.append(match_hist_pages[i])
+        else:
+            pg.append(match_hist_pages[-1])
+        page_list.append(pg)
+
+    paginator = pages.Paginator(pages=page_list, loop_pages=True)
+    await paginator.respond(ctx.interaction)
 
 @bot.slash_command(
     name="leaderboard",
@@ -110,23 +151,31 @@ async def get_profile(ctx, player_name: str):
 async def get_leaderboard(ctx):
     logging.info(f"Received LEADERBOARD request")
 
-    embed = discord.Embed(
-        title=f"Inhouses Leaderboard"
-    )
-    table_header = f"```{'Rank':5}{'Name':18}{'MMR':6}{'Wins':6}{'Losses':7}{'Winrate':<7}```"
-    table_body = "```"
-    rows = sorted(stats.values(), reverse=True, key=lambda x: x.mmr.mu)
-    rows = filter(lambda x: x.gamesPlayed >= 7, rows)
-    for i, row in enumerate(rows):
-        table_body += f"{i + 1}".ljust(5)
-        table_body += f"{row.playerDisplayName:18}"
-        table_body += f"{row.mmr.mu:<6.0f}"
-        table_body += f"{row.wins:<6}{row.losses:<7}{row.winrate:>3}%"
-        table_body += "\n"
-    table_body += '```'
-    embed.add_field(name="", value=table_header + table_body)
+    leaderboard = sorted(stats.values(), reverse=True, key=lambda x: x.mmr.mu)
+    page_list = []
+    PAGE_SIZE = 20
 
-    await ctx.respond(embed=embed)
+    rank = 1
+    for rows in chunks(leaderboard, PAGE_SIZE):
+        embed = discord.Embed(
+            title=f"Inhouses Leaderboard"
+        )
+        table_header = f"```{'Rank':5}{'Name':18}{'MMR':6}{'Wins':6}{'Losses':7}{'Winrate':<7}```"
+        table_body = "```"
+        for row in rows:
+            table_body += f"{rank}".ljust(5)
+            table_body += f"{row.playerDisplayName:18}"
+            table_body += f"{row.mmr.mu:<6.0f}"
+            table_body += f"{row.wins:<6}{row.losses:<7}{row.winrate:>3}%"
+            table_body += "\n"
+            rank += 1
+        table_body += '```'
+        embed.add_field(name="", value=table_header + table_body)
+        
+        page_list.append(embed)
+
+    paginator = pages.Paginator(pages=page_list, loop_pages=True)
+    await paginator.respond(ctx.interaction)
 
 @bot.slash_command(
     name="synergy",
