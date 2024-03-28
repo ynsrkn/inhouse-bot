@@ -6,6 +6,7 @@ from generate_player_stats import track_player_stats, load_games
 from utils import chunks
 import logging
 import json
+from scrape_match_data import ClientNotOpenException, scrape_match_data
 
 from Match import Match
 
@@ -320,13 +321,19 @@ async def match_details(ctx, match_id: int):
 def __update():
     global match_history, stats
 
-    matches = load_games("matches/")
-    stats, predictions = track_player_stats(matches)
+    # scrape custom games from Yunis's PC
+    # requires client to be open locally
+    logging.info("Scraping client")
+    try:
+        scrape_match_data()
+    finally:
+        matches = load_games("matches/")
+        stats, predictions = track_player_stats(matches)
 
-    if len(matches) != len(predictions):
-        raise Exception("matches and predictions are of different lengths")
-    
-    match_history = [Match(matches[i], predictions[i]) for i in range(len(matches))]
+        if len(matches) != len(predictions):
+            raise Exception("matches and predictions are of different lengths")
+        
+        match_history = [Match(matches[i], predictions[i]) for i in range(len(matches))]
 
 @bot.slash_command(
     name="update",
@@ -334,13 +341,22 @@ def __update():
 )
 async def update(ctx):
     logging.info("Received UPDATE request")
-    __update()
+    try:
+        __update()
+    except ClientNotOpenException:
+        await ctx.respond(embed=discord.Embed(title="Update Failed: client not open on Yunis' PC. Go beg him"))
+        return
+    
     await ctx.respond(embed=discord.Embed(title="Stats updated!"))
 
 if __name__ == "__main__":
     # initialize stats object on startup
     logging.info("Calculating stats and match history")
-    __update()
+    try:
+        __update()
+    except ClientNotOpenException:
+        logging.info("Client not open")
+
     logging.info("Populated objects; Ready!")
 
     with open("secrets.json") as fh:
