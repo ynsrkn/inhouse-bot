@@ -35,8 +35,8 @@ async def get_profile(ctx, player_name: str):
     )
 
     embed.add_field(
-        name=f"**{p_stats.wins}W {p_stats.losses}L**\n",            
-        value=f"{p_stats.winrate}% Win Rate",
+        name=f"**{p_stats.mmr.mu:.0f} MMR**\n",            
+        value=f"{p_stats.wins}W {p_stats.losses}L {p_stats.winrate}% WR",
         inline=True
     )
     embed.add_field(
@@ -109,12 +109,14 @@ async def get_leaderboard(ctx):
     embed = discord.Embed(
         title=f"Inhouses Leaderboard"
     )
-    table_header = f"```{'Rank':5}{'Name':18}{'Wins':6}{'Losses':7}{'Winrate':<7}```"
+    table_header = f"```{'Rank':5}{'Name':18}{'MMR':6}{'Wins':6}{'Losses':7}{'Winrate':<7}```"
     table_body = "```"
-    rows = sorted(stats.values(), reverse=True, key=lambda x: (x.wins - x.losses, x.gamesPlayed, x.winrate))
+    rows = sorted(stats.values(), reverse=True, key=lambda x: x.mmr.mu)
+    rows = filter(lambda x: x.gamesPlayed >= 7, rows)
     for i, row in enumerate(rows):
         table_body += f"{i + 1}".ljust(5)
         table_body += f"{row.playerDisplayName:18}"
+        table_body += f"{row.mmr.mu:<6.0f}"
         table_body += f"{row.wins:<6}{row.losses:<7}{row.winrate:>3}%"
         table_body += "\n"
     table_body += '```'
