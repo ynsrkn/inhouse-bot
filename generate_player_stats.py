@@ -1,6 +1,7 @@
 import os
 import json
 import re
+from trueskill import Rating, rate, setup
 
 champ_id_map = {
     266: "Aatrox",
@@ -174,6 +175,9 @@ champ_id_map = {
 
 MATCHES_PATH = "matches/"
 
+# setup trueskill global environment
+setup(mu=1200, draw_probability=0, sigma=400, beta=400)
+
 class PlayerGameStats:
     def __init__(self, raw_stats, pmap, gameId) -> None:
         self.gameId = gameId
@@ -315,6 +319,7 @@ class PlayerHistoricalStats:
         self.teammates = {}
         self.opponents = {}
         self.championStats = {}
+        self.mmr = Rating()
 
     def add_game_stats(self, game_stats: PlayerGameStats) -> None:
         self.totalCs += game_stats.cs
@@ -379,28 +384,52 @@ class PlayerHistoricalStats:
         self.totalGameDuration += game.gameDuration
         self.csPerMin = round(self.totalCs / self.totalGameDuration * 60, 1)
 
-    def __str__(self) -> str:
+
+    def __repr__(self) -> str:
         res = ""
         res += f"{self.playerName}".ljust(16)
         res += f"{self.wins}W {self.losses}L ({self.winrate}% WR)".ljust(20)
         res += f"KDA: {self.avgKills} / {self.avgDeaths} / {self.avgAssists}".ljust(23)
         res += f"({self.totalkda})".ljust(10)
-        res += f"Avg dmg: {self.averageDamageDealt:,}"
+        res += f"Avg dmg: {self.averageDamageDealt:,}".ljust(20)
+        res += f"MMR: {self.mmr}"
         return res
-        
 
 def track_player_stats(games):
     playerStats = {}
 
-    for game in games:
-        for playerGameStats in game.players:
+    def _get_team_mmrs(team):
+        team_mmrs = {}
+        for playerGameStats in team:
             playerName = playerGameStats.playerName
             playerDisplayName = playerGameStats.playerDisplayName
-            
+
             if playerName not in playerStats:
                 playerStats[playerName] = PlayerHistoricalStats(playerName, playerDisplayName)
             
-            playerStats[playerName].add_game( game, playerGameStats)
+            team_mmrs[playerName] = playerStats[playerName].mmr
+        return team_mmrs
+
+    for game in games:
+        # get team mmrs for rating groups
+        ratingGroups = (_get_team_mmrs(game.team1), _get_team_mmrs(game.team2))
+        ranks = [0, 1] if game.team1[0].win else [1, 0]
+
+        # update trueskill based on match result
+        updatedRatingGroups = rate(ratingGroups, ranks)
+
+        # update player stats with new ratings
+        for teamGroup in updatedRatingGroups:
+            for playerName, updatedMMR in teamGroup.items():
+                mmrDelta = updatedMMR.mu - playerStats[playerName].mmr.mu
+                playerStats[playerName].mmr = updatedMMR
+
+        # handle in game stat updating
+        for playerGameStats in game.players:
+            playerName = playerGameStats.playerName
+            
+            # guaranteed playerName is in stats in mmr loop
+            playerStats[playerName].add_game(game, playerGameStats)
 
     return playerStats
 
@@ -427,6 +456,6 @@ if __name__ == "__main__":
     for game in games:
         print(game)
 
-    for playerName, stats in sorted(playerStats.items(), key=lambda x: -x[1].winrate):
+    for playerName, stats in sorted(playerStats.items(), key=lambda x: -x[1].mmr.mu):
         print(stats)
 
