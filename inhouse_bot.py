@@ -5,6 +5,8 @@ from generate_player_stats import track_player_stats, load_games
 import logging
 import json
 
+from Match import Match
+
 bot = commands.Bot()
 #            Test server          Monkeys             Free Isreal
 GUILD_IDS = [1216905929350582312, 317463653597052928, 695069672705359953]
@@ -13,9 +15,9 @@ GUILD_IDS = [1216905929350582312, 317463653597052928, 695069672705359953]
 logging.basicConfig(level=logging.INFO)
 
 # stats object
-stats = None
+stats: dict[PlayerGameStats] = None
 # match history
-match_history = None
+match_history: list[Match] = None
 
 @bot.slash_command(
     name="profile",
@@ -85,13 +87,15 @@ async def get_profile(ctx, player_name: str):
         inline=False
     )
 
-    table_header = f"```{'ID':5}{'Result':10}{'Champion':13}{'KDA':8}```"
+    table_header = f"```{'ID':5}{'Result':10}{'Champion':13}{'KDA':10}{'MMR ±':6}```"
     body = "```"
     for match in p_stats.matchHistory[:20]:
-        body += str(match.gameId).ljust(5)
-        body += f"{'Victory' if match.win else 'Defeat':10}"
-        body += f"{match.championName:13}"
-        body += f"{match.kills}/{match.deaths}/{match.assists}"
+        matchStats = match.gameStats
+        body += str(matchStats.gameId).ljust(5)
+        body += f"{'Victory' if matchStats.win else 'Defeat':10}"
+        body += f"{matchStats.championName:13}"
+        body += f"{matchStats.kills}/{matchStats.deaths}/{matchStats.assists}".ljust(10)
+        body += f"{'+' if match.mmrDelta >= 0 else ''}{match.mmrDelta:.0f}".ljust(6)
         body += "\n"
     body += "```"
     embed.add_field(name="**Match History:**", value=table_header + body, inline=False)
@@ -216,14 +220,17 @@ async def match_details(ctx, match_id: int):
         await ctx.respond(embed=discord.Embed(title=f"Could not find match #{match_id}"))
         return
     
-    match_info = match_history[match_id - 1]
+    match_info = match_history[match_id - 1].game
+    match_prediction = match_history[match_id - 1].prediction * 100
     game_min, game_sec = divmod(match_info.gameDuration, 60)
     embed = discord.Embed(
         title=f"Match Details For Match #{match_id}"
     )
 
-    header = f"```{'Name':16}{'Champion':13}{'KDA':10}{'CS':6}{'DMG':8}```"
-    embed.add_field(name=f"{match_info.result} in {game_min:02d}:{game_sec:02d}", value=header, inline=False)
+    result_header = f"{match_info.result} in {game_min:02d}:{game_sec:02d}".ljust(62)
+    result_header += f"{match_prediction:.2f}% Blue vs {100 - match_prediction:.2f}% Red"
+    table_header = f"```{'Name':16}{'Champion':13}{'KDA':10}{'CS':6}{'DMG':8}```"
+    embed.add_field(name=result_header, value=table_header, inline=False)
 
     for name, team in [("BLUE", match_info.team1), ("RED", match_info.team2)]:
         body = "```"
@@ -239,23 +246,30 @@ async def match_details(ctx, match_id: int):
 
     await ctx.respond(embed=embed)
 
+def __update():
+    global match_history, stats
+
+    matches = load_games("matches/")
+    stats, predictions = track_player_stats(matches)
+
+    if len(matches) != len(predictions):
+        raise Exception("matches and predictions are of different lengths")
+    
+    match_history = [Match(matches[i], predictions[i]) for i in range(len(matches))]
+
 @bot.slash_command(
     name="update",
     description="Triggers a stats recalc."
 )
 async def update(ctx):
     logging.info("Received UPDATE request")
-
-    global match_history, stats
-    match_history= load_games("matches/")
-    stats = track_player_stats(match_history)
+    __update()
     await ctx.respond(embed=discord.Embed(title="Stats updated!"))
 
 if __name__ == "__main__":
     # initialize stats object on startup
     logging.info("Calculating stats and match history")
-    match_history = load_games("matches/")
-    stats = track_player_stats(match_history)
+    __update()
     logging.info("Populated objects; Ready!")
 
     with open("secrets.json") as fh:

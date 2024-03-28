@@ -1,7 +1,9 @@
 import os
 import json
 import re
-from trueskill import Rating, rate, setup
+import trueskill
+import itertools
+import math
 
 champ_id_map = {
     266: "Aatrox",
@@ -176,7 +178,11 @@ champ_id_map = {
 MATCHES_PATH = "matches/"
 
 # setup trueskill global environment
-setup(mu=1200, draw_probability=0, sigma=400, beta=400)
+MU = 1200
+DRAW_PROB = 0
+BETA = 500
+SIGMA = 400
+trueskill.setup(mu=MU, draw_probability=DRAW_PROB, sigma=SIGMA, beta=BETA)
 
 class PlayerGameStats:
     def __init__(self, raw_stats, pmap, gameId) -> None:
@@ -295,6 +301,13 @@ class ChampionStats:
     def __repr__(self) -> str:
         return f"{self.championName}: {self.gamesPlayed} games ({self.winrate}% WR)"
 
+
+class MatchHistoryMatch:
+    def __init__(self, gameStats: PlayerGameStats, mmrDelta: int) -> None:
+        self.gameStats = gameStats
+        self.mmrDelta = mmrDelta
+
+
 class PlayerHistoricalStats:
     wins = 0
     losses = 0
@@ -308,18 +321,17 @@ class PlayerHistoricalStats:
     totalkda = 0
     averageDamageDealt = 0
     winrate = 0
-    matchHistory = []
     totalGameDuration = 0
     totalCs = 0
     csPerMin = 0
     def __init__(self, playerName: str, playerDisplayName: str) -> None:
-        self.matchHistory = []
+        self.matchHistory: list[MatchHistoryMatch] = []
         self.playerName = playerName
         self.playerDisplayName = playerDisplayName
         self.teammates = {}
         self.opponents = {}
         self.championStats = {}
-        self.mmr = Rating()
+        self.mmr = trueskill.Rating()
 
     def add_game_stats(self, game_stats: PlayerGameStats) -> None:
         self.totalCs += game_stats.cs
@@ -341,7 +353,6 @@ class PlayerHistoricalStats:
         else:
             self.losses += 1
         self.winrate = int(round(self.wins / (self.wins + self.losses) * 100, 0))
-        self.matchHistory.insert(0, game_stats)
 
         self.averageDamageDealt = int(((self.averageDamageDealt * (self.gamesPlayed - 1)) + game_stats.damageDealt) / self.gamesPlayed)
 
@@ -365,8 +376,10 @@ class PlayerHistoricalStats:
                 
                 self.opponents[opponent.playerName].add_game(win)
     
-    def add_game(self, game: Game, playerGameStats: PlayerGameStats) -> None:
+    def add_game(self, game: Game, playerGameStats: PlayerGameStats, mmrDelta: int) -> None:
         self.add_game_stats(playerGameStats)
+
+        self.matchHistory.insert(0, MatchHistoryMatch(playerGameStats, mmrDelta))
 
         # track teammate and opponent information
         playerTeam = 1
@@ -395,8 +408,22 @@ class PlayerHistoricalStats:
         res += f"MMR: {self.mmr}"
         return res
 
-def track_player_stats(games):
+def _calculate_win_probability(ratingGroups) -> float:
+    '''
+        Calculate win probablility between two teams in Trueskill
+    '''
+    team1 = ratingGroups[0].values()
+    team2 = ratingGroups[1].values()
+    delta_mu = sum(r.mu for r in team1) - sum(r.mu for r in team2)
+    sum_sigma = sum(r.sigma ** 2 for r in itertools.chain(team1, team2))
+    size = len(team1) + len(team2)
+    denom = math.sqrt(size * (BETA * BETA) + sum_sigma)
+    ts = trueskill.global_env()
+    return ts.cdf(delta_mu / denom)
+
+def track_player_stats(games: list[Game]):
     playerStats = {}
+    gamePredictions = []
 
     def _get_team_mmrs(team):
         team_mmrs = {}
@@ -415,25 +442,33 @@ def track_player_stats(games):
         ratingGroups = (_get_team_mmrs(game.team1), _get_team_mmrs(game.team2))
         ranks = [0, 1] if game.team1[0].win else [1, 0]
 
+        # predict team1 win probability
+        gamePrediction = _calculate_win_probability(ratingGroups)
+        gamePredictions.append(gamePrediction)
+
         # update trueskill based on match result
-        updatedRatingGroups = rate(ratingGroups, ranks)
+        updatedRatingGroups = trueskill.rate(ratingGroups, ranks)
+
+        # keep track of mmr deltas
+        playerMmrDeltas = {}
 
         # update player stats with new ratings
         for teamGroup in updatedRatingGroups:
             for playerName, updatedMMR in teamGroup.items():
                 mmrDelta = updatedMMR.mu - playerStats[playerName].mmr.mu
                 playerStats[playerName].mmr = updatedMMR
+                playerMmrDeltas[playerName] = mmrDelta
 
         # handle in game stat updating
         for playerGameStats in game.players:
             playerName = playerGameStats.playerName
             
             # guaranteed playerName is in stats in mmr loop
-            playerStats[playerName].add_game(game, playerGameStats)
+            playerStats[playerName].add_game(game, playerGameStats, playerMmrDeltas[playerName])
 
-    return playerStats
+    return playerStats, gamePredictions
 
-def load_games(dir_path):
+def load_games(dir_path: str) -> list[Game]:
     games = []
     for i, matchFileName in enumerate(os.listdir(dir_path)):
         data = {}
@@ -451,7 +486,7 @@ if __name__ == "__main__":
 
     games = load_games(DIR_PATH)
     
-    playerStats = track_player_stats(games)
+    playerStats, predictions = track_player_stats(games)
 
     for game in games:
         print(game)
