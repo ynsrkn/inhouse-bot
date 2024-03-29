@@ -7,28 +7,28 @@ from classes.Game import Game
 import trueskill
 
 class PlayerHistoricalStats:
-    wins = 0
-    losses = 0
-    gamesPlayed = 0
-    totalKills = 0
-    totalDeaths = 0
-    totalAssists = 0
-    avgKills = 0
-    avgDeaths = 0
-    avgAssists = 0
-    totalkda = 0
-    averageDamageDealt = 0
-    winrate = 0
-    totalGameDuration = 0
-    totalCs = 0
-    csPerMin = 0
+    wins: int = 0
+    losses: int = 0
+    gamesPlayed: int = 0
+    totalKills: int = 0
+    totalDeaths: int = 0
+    totalAssists: int = 0
+    avgKills: float = 0
+    avgDeaths: float = 0
+    avgAssists: float = 0
+    totalkda: float = 0
+    averageDamageDealt: float = 0
+    winrate: float = 0
+    totalGameDuration: int = 0
+    totalCs: int = 0
+    csPerMin: float = 0
     def __init__(self, playerName: str, playerDisplayName: str) -> None:
         self.matchHistory: list[MatchHistoryMatch] = []
-        self.playerName = playerName
-        self.playerDisplayName = playerDisplayName
-        self.teammates = {}
-        self.opponents = {}
-        self.championStats = {}
+        self.playerName: str = playerName
+        self.playerDisplayName: str = playerDisplayName
+        self.teammates: dict[str, Teammate] = {}
+        self.opponents: dict[str, Teammate] = {}
+        self.championStats: dict[str, ChampionStats] = {}
         self.mmr = trueskill.Rating()
 
 
@@ -60,7 +60,7 @@ class PlayerHistoricalStats:
         self.championStats[game_stats.championName].add_game(game_stats)
 
 
-    def track_teammate_stats(self, win: bool, teammates, opponents):
+    def track_teammate_stats(self, win: bool, teammates: dict[str, Teammate], opponents: dict[str, Teammate]):
             for teammate in teammates:
                 if teammate.playerName == self.playerName:
                     continue

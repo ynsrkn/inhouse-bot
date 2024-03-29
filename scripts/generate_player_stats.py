@@ -38,7 +38,7 @@ def track_player_stats(games: list[Game]) -> tuple[dict[str, PlayerHistoricalSta
     playerStats: dict[str, PlayerHistoricalStats] = {}
     gamePredictions: list[float] = []
 
-    def __get_team_mmrs(team):
+    def __get_team_mmrs(team: list[PlayerGameStats]):
         team_mmrs = {}
         for playerGameStats in team:
             playerName = playerGameStats.playerName

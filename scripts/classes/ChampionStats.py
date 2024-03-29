@@ -1,19 +1,19 @@
 from classes.PlayerGameStats import PlayerGameStats
 
 class ChampionStats:
-    def __init__(self, championName) -> None:
-        self.championName = championName
-        self.gamesPlayed = 0
-        self.wins = 0
-        self.losses = 0
-        self.winrate = 0
-        self.totalKills = 0
-        self.totalDeaths = 0
-        self.totalAssists = 0
-        self.avgKills = 0
-        self.avgDeaths = 0
-        self.avgAssists = 0
-        self.avgkda = 0
+    def __init__(self, championName: str) -> None:
+        self.championName: str = championName
+        self.gamesPlayed: int = 0
+        self.wins: int = 0
+        self.losses: int = 0
+        self.winrate: float = 0
+        self.totalKills: int = 0
+        self.totalDeaths: int = 0
+        self.totalAssists: int = 0
+        self.avgKills: int = 0
+        self.avgDeaths: int = 0
+        self.avgAssists: int = 0
+        self.avgkda: float = 0
 
 
     def add_game(self, game_stats: PlayerGameStats):
