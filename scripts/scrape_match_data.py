@@ -1,9 +1,12 @@
+from lcu_connector import Connector
+from classes.ClientNotOpenException import ClientNotOpenException
+from constants import MATCHES_PATH
+
 import requests
 import os
 import json
 import urllib3
 import logging
-from lcu_connector import Connector
 
 # shut up let me write bad code
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -15,10 +18,12 @@ URL_BASE = "https://127.0.0.1:"
 MATCHES_ENDPOINT = "/lol-match-history/v1/products/lol/current-summoner/matches"
 GAMES_ENDPOINT = "/lol-match-history/v1/games/"
 
-class ClientNotOpenException(Exception):
-    pass
 
 def scrape_match_data() -> None:
+    """
+        Scrape custom game data from an open local client's match history and adds the JSON
+        result to the /matches folder
+    """
     try:
         connector = Connector(start=True)
     except:
@@ -30,7 +35,11 @@ def scrape_match_data() -> None:
     headers = connector.headers
 
     # get list of matches
-    response = requests.get(connector.url + MATCHES_ENDPOINT, headers=headers, verify=False)
+    response = requests.get(
+        connector.url + MATCHES_ENDPOINT,
+        headers=headers,
+        verify=False
+    )
     riotGameIds = []
     # get riotGameIds of inhouse custom games
     matches = response.json()['games']['games']
@@ -40,9 +49,9 @@ def scrape_match_data() -> None:
 
     # get each match data
     retrieved_game = False
-    for i, riotGameId in enumerate(riotGameIds[::-1]):
-        matchId = len(os.listdir("matches/")) + 1
-        matchFileName = f"matches/match-{riotGameId}.json"
+    for riotGameId in riotGameIds[::-1]:
+        matchId = len(os.listdir(MATCHES_PATH)) + 1
+        matchFileName = f"{MATCHES_PATH}/match-{riotGameId}.json"
         
         if not os.path.exists(matchFileName):
             logging.info(f"Getting data for riotGameId: {riotGameId}, matchId: {matchId}")
@@ -59,6 +68,7 @@ def scrape_match_data() -> None:
     
     if not retrieved_game:
         logging.info("No new games")
+
 
 if __name__ == "__main__":
     scrape_match_data()

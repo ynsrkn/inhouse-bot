@@ -1,14 +1,22 @@
+from generate_player_stats import track_player_stats, load_games
+from constants import MATCHES_PATH, SECRETS_PATH
+from utils import chunks
+from scrape_match_data import scrape_match_data
+
+from classes.Match import Match
+from classes.Game import Game
+from classes.PlayerGameStats import PlayerGameStats
+from classes.PlayerHistoricalStats import PlayerHistoricalStats
+from classes.Teammate import Teammate
+from classes.ChampionStats import ChampionStats
+from classes.ClientNotOpenException import ClientNotOpenException
+
 import discord
 from discord.ext import commands, pages
+from discord.commands import option
 from discord.utils import basic_autocomplete
-from generate_player_stats import Game, PlayerGameStats, PlayerHistoricalStats, Teammate, ChampionStats
-from generate_player_stats import track_player_stats, load_games
-from utils import chunks
 import logging
 import json
-from scrape_match_data import ClientNotOpenException, scrape_match_data
-
-from Match import Match
 
 bot = commands.Bot()
 #            Test server          Monkeys             Free Isreal
@@ -22,7 +30,10 @@ stats: dict[PlayerGameStats] = None
 # match history
 match_history: list[Match] = None
 
-async def _get_player_list(ctx: discord.AutocompleteContext):
+async def __get_player_list(ctx: discord.AutocompleteContext):
+    """
+        Returns a lexicographically sorted list of player display names for autocompleting
+    """
     return sorted(list(map(lambda x: x.playerDisplayName, stats.values())))
 
 @bot.slash_command(
@@ -30,9 +41,10 @@ async def _get_player_list(ctx: discord.AutocompleteContext):
     description="Get a summoners profile.",
     guild_ids=GUILD_IDS
 )
+@option("player_name", autocomplete=basic_autocomplete(__get_player_list))
 async def get_profile(
         ctx: discord.ApplicationContext,
-        player_name: discord.Option(str, autocomplete=basic_autocomplete(_get_player_list))
+        player_name: str
     ):
 
     logging.info(f"Received PROFILE request player_name={player_name}")
@@ -190,15 +202,18 @@ async def get_leaderboard(
     paginator = pages.Paginator(pages=page_list, loop_pages=True, author_check=False, timeout=None)
     await paginator.respond(ctx.interaction)
 
+
 @bot.slash_command(
     name="synergy",
     description="Get the winrate of two players when on the same team.",
     guild_ids=GUILD_IDS
 )
+@option("player1", autocomplete=basic_autocomplete(__get_player_list))
+@option("player2", autocomplete=basic_autocomplete(__get_player_list))
 async def get_synergy(
         ctx: discord.ApplicationContext,
-        player1: discord.Option(str, autocomplete=basic_autocomplete(_get_player_list)),
-        player2: discord.Option(str, autocomplete=basic_autocomplete(_get_player_list))
+        player1: str,
+        player2: str
     ):
 
     logging.info(f"Received SYNERGY request player1={player1}, player2={player2}")
@@ -240,15 +255,18 @@ async def get_synergy(
 
     await ctx.respond(embed=embed)
 
+
 @bot.slash_command(
     name="versus",
     description="Get the winrate of player1 when against player2.",
     guild_ids=GUILD_IDS
 )
+@option("player1", autocomplete=basic_autocomplete(__get_player_list))
+@option("player2", autocomplete=basic_autocomplete(__get_player_list))
 async def get_versus(
         ctx: discord.ApplicationContext,
-        player1: discord.Option(str, autocomplete=basic_autocomplete(_get_player_list)),
-        player2: discord.Option(str, autocomplete=basic_autocomplete(_get_player_list))
+        player1: str,
+        player2: str
     ):
 
     logging.info(f"Received VERSUS request player1={player1}, player2={player2}")
@@ -280,6 +298,7 @@ async def get_versus(
     )
 
     await ctx.respond(embed=embed)
+
 
 @bot.slash_command(
     name="match_details",
@@ -318,7 +337,12 @@ async def match_details(ctx, match_id: int):
 
     await ctx.respond(embed=embed)
 
+
 def __update():
+    """
+        Scrapes custom games from local match history and updates the global
+        match_history and stats objects. Requires client to be open
+    """
     global match_history, stats
 
     # scrape custom games from Yunis's PC
@@ -327,7 +351,7 @@ def __update():
     try:
         scrape_match_data()
     finally:
-        matches = load_games("matches/")
+        matches = load_games(MATCHES_PATH)
         stats, predictions = track_player_stats(matches)
 
         if len(matches) != len(predictions):
@@ -340,15 +364,23 @@ def __update():
     description="Triggers a stats recalc."
 )
 async def update(ctx):
+    await ctx.defer(ephemeral=False)
+
     logging.info("Received UPDATE request")
     try:
         __update()
     except ClientNotOpenException:
-        await ctx.respond(embed=discord.Embed(title="Update Failed: client not open on Yunis' PC. Go beg him"))
+        await ctx.respond(
+            embed=discord.Embed(title="Update Failed: client not open on Yunis' PC. Go beg him"),
+            ephemeral=False
+        )
         return
     
-    await ctx.respond(embed=discord.Embed(title="Stats updated!"))
+    await ctx.respond(embed=discord.Embed(title="Stats updated!"), ephemeral=False)
 
+"""
+    App entry point
+"""
 if __name__ == "__main__":
     # initialize stats object on startup
     logging.info("Calculating stats and match history")
@@ -359,7 +391,9 @@ if __name__ == "__main__":
 
     logging.info("Populated objects; Ready!")
 
-    with open("secrets.json") as fh:
-        token = json.load(fh)['token']
+    with open(SECRETS_PATH) as fh:
+        secrets = json.load(fh)
+        token = secrets['token']
+
 
     bot.run(token)
