@@ -11,9 +11,6 @@ import logging
 # shut up let me write bad code
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
-# Set log level
-logging.basicConfig(level=logging.INFO)
-
 URL_BASE = "https://127.0.0.1:"
 MATCHES_ENDPOINT = "/lol-match-history/v1/products/lol/current-summoner/matches"
 GAMES_ENDPOINT = "/lol-match-history/v1/games/"

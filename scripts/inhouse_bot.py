@@ -23,7 +23,11 @@ bot = commands.Bot()
 GUILD_IDS = [1216905929350582312, 317463653597052928, 695069672705359953]
 
 # Set log level
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(
+    format='%(asctime)s %(levelname)-8s %(message)s',
+    level=logging.INFO,
+    datefmt='%Y-%m-%d %H:%M:%S'
+)
 
 # stats object
 stats: dict[PlayerGameStats] = None
