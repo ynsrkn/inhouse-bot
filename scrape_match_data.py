@@ -43,6 +43,7 @@ def scrape_match_data() -> None:
     for i, riotGameId in enumerate(riotGameIds[::-1]):
         matchId = len(os.listdir("matches/")) + 1
         matchFileName = f"matches/match-{riotGameId}.json"
+        
         if not os.path.exists(matchFileName):
             logging.info(f"Getting data for riotGameId: {riotGameId}, matchId: {matchId}")
             response = requests.get(
