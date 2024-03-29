@@ -109,4 +109,3 @@ if __name__ == "__main__":
 
     for playerName, stats in sorted(playerStats.items(), key=lambda x: -x[1].mmr.mu):
         print(stats)
-
