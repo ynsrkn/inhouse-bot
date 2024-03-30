@@ -306,11 +306,15 @@ async def get_versus(
 
 @bot.slash_command(
     name="match_details",
-    description="Return a detailed description of a specific match."
+    description="Return a detailed description of a specific match. Returns most recent game if id not specified."
 )
-async def match_details(ctx, match_id: int):
+async def match_details(ctx, match_id: discord.Option(int) = -1):
     logging.info(f"Received MATCH_DETAILS request for match_id: {match_id}")
 
+    # if match_id is not specified return most recent game
+    if match_id == -1:
+        match_id = len(match_history)
+    
     if match_id > len(match_history):
         await ctx.respond(embed=discord.Embed(title=f"Could not find match #{match_id}"))
         return
