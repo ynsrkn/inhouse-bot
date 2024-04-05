@@ -108,12 +108,12 @@ async def get_profile(
         body = "```"
         for champ in chunk:
             body += f"{rank}. {champ.championName}".ljust(18)
-            body += f"{champ.avgkda} KDA".ljust(15)
+            body += f"{champ.avgkda} KDA".ljust(13)
             body += f"{champ.winrate}% WR".rjust(8)
             body += "\n"
             # next line
             body += " " * 16 # spacer
-            body += f"{champ.avgKills}/{champ.avgDeaths}/{champ.avgAssists}".ljust(17)
+            body += f"{champ.avgKills}/{champ.avgDeaths}/{champ.avgAssists}".ljust(15)
             body += f"{champ.gamesPlayed} game{'s' if champ.gamesPlayed > 1 else ''}".rjust(8)
             body += "\n"
             rank += 1
@@ -136,7 +136,7 @@ async def get_profile(
             title="Match History",
             description="⎯" * MIN_EMBED_WIDTH
         )
-        table_header = f"```{'ID':5}{'Result':10}{'Champion':13}{'KDA':10}{'MMR ±':6}```"
+        table_header = f"```{'ID':5}{'Result':10}{'Champion':13}{'KDA':10}{'MMR ±':11}```"
         body = "```"
         for match in chunk:
             matchStats = match.gameStats
@@ -189,7 +189,7 @@ async def get_leaderboard(
         embed = discord.Embed(
             title=f"Inhouses Leaderboard"
         )
-        table_header = f"```{'Rank':5}{'Name':18}{'MMR':6}{'Wins':6}{'Losses':7}{'Winrate':<7}```"
+        table_header = f"```{'Rank':5}{'Name':18}{'MMR':6}{'Wins':6}{'Losses':7}{'Winrate':<13}```"
         table_body = "```"
         for row in rows:
             table_body += f"{rank}".ljust(5)
@@ -328,7 +328,7 @@ async def match_details(ctx, match_id: discord.Option(int) = -1):
 
     result_header = f"{match_info.result} in {game_min:02d}:{game_sec:02d}".ljust(62)
     result_header += f"{match_prediction:.2f}% Blue vs {100 - match_prediction:.2f}% Red"
-    table_header = f"```{'Name':16}{'Champion':13}{'KDA':10}{'CS':6}{'DMG':8}```"
+    table_header = f"```{'Name':16}{'Champion':13}{'KDA':10}{'CS':6}{'DMG':12}```"
     embed.add_field(name=result_header, value=table_header, inline=False)
 
     for name, team in [("BLUE", match_info.team1), ("RED", match_info.team2)]:
@@ -338,7 +338,7 @@ async def match_details(ctx, match_id: discord.Option(int) = -1):
             body += f"{player.championName:13}"
             body += f"{player.kills}/{player.deaths}/{player.assists}".ljust(10)
             body += f"{player.cs:<6}"
-            body += f"{player.damageDealt:,}"
+            body += f"{player.damageDealt / 1000:,.1f}k"
             body += "\n"
         body += "```"
         embed.add_field(name=f"**{name}**", value=body, inline=False)
