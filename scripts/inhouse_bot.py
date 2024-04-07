@@ -1,7 +1,7 @@
 from generate_player_stats import track_player_stats, load_games
-from constants import MATCHES_PATH, SECRETS_PATH
-from utils import chunks
+from utils import chunks, load_config, set_logging_config, get_database_connection
 from scrape_match_data import scrape_match_data
+from constants import CONFIG_PATH
 
 from classes.Match import Match
 from classes.Game import Game
@@ -16,18 +16,17 @@ from discord.ext import commands, pages
 from discord.commands import option
 from discord.utils import basic_autocomplete
 import logging
-import json
+from pymongo.database import Database
 
 bot = commands.Bot()
-#            Test server          Monkeys             Free Isreal
-GUILD_IDS = [1216905929350582312, 317463653597052928, 695069672705359953]
 
-# Set log level
-logging.basicConfig(
-    format='%(asctime)s %(levelname)-8s %(message)s',
-    level=logging.INFO,
-    datefmt='%Y-%m-%d %H:%M:%S'
-)
+# load config
+config = load_config(CONFIG_PATH)
+
+GUILD_IDS = config['GUILD_IDS']
+
+# open local database connection
+db: Database = get_database_connection(config["DB_CONNECTION_STRING"])
 
 # stats object
 stats: dict[PlayerGameStats] = None
@@ -356,16 +355,16 @@ def __update():
     # scrape custom games from Yunis's PC
     # requires client to be open locally
     logging.info("Scraping client")
-    try:
-        scrape_match_data()
-    finally:
-        matches = load_games(MATCHES_PATH)
-        stats, predictions = track_player_stats(matches)
+    
+    scrape_match_data(db)
+    matches = load_games(db)
+    stats, predictions = track_player_stats(matches)
 
-        if len(matches) != len(predictions):
-            raise Exception("matches and predictions are of different lengths")
-        
-        match_history = [Match(matches[i], predictions[i]) for i in range(len(matches))]
+    if len(matches) != len(predictions):
+        raise Exception("matches and predictions are of different lengths")
+    
+    match_history = [Match(matches[i], predictions[i]) for i in range(len(matches))]
+
 
 @bot.slash_command(
     name="update",
@@ -390,18 +389,17 @@ async def update(ctx):
     App entry point
 """
 if __name__ == "__main__":
+
+    # Set log level
+    set_logging_config()
+
     # initialize stats object on startup
-    logging.info("Calculating stats and match history")
     try:
+        logging.info("Calculating stats and match history")
         __update()
     except ClientNotOpenException:
         logging.info("Client not open")
 
     logging.info("Populated objects; Ready!")
 
-    with open(SECRETS_PATH) as fh:
-        secrets = json.load(fh)
-        token = secrets['token']
-
-
-    bot.run(token)
+    bot.run(config['DISCORD_TOKEN'])

@@ -1,12 +1,12 @@
 from lcu_connector import Connector
 from classes.ClientNotOpenException import ClientNotOpenException
-from constants import MATCHES_PATH
+from utils import load_config, get_database_connection
+from constants import CONFIG_PATH
 
 import requests
-import os
-import json
 import urllib3
 import logging
+from pymongo.database import Database
 
 # shut up let me write bad code
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
@@ -14,11 +14,9 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 MATCHES_ENDPOINT = "/lol-match-history/v1/products/lol/current-summoner/matches"
 GAMES_ENDPOINT = "/lol-match-history/v1/games/"
 
-
-def scrape_match_data() -> None:
+def scrape_match_data(db: Database) -> None:
     """
-        Scrape custom game data from an open local client's match history and adds the JSON
-        result to the /matches folder
+        Scrape custom game data from an open local client's match history and inserts into DB
     """
     try:
         connector = Connector(start=True)
@@ -27,6 +25,8 @@ def scrape_match_data() -> None:
         raise ClientNotOpenException
 
     logging.info("Getting local match history")
+
+    matches_table = db["matches"]
     
     headers = connector.headers
 
@@ -38,7 +38,12 @@ def scrape_match_data() -> None:
     )
     riotGameIds = []
     # get riotGameIds of inhouse custom games
-    matches = response.json()['games']['games']
+    try:
+        matches = response.json()['games']['games']
+    except KeyError:
+        logging.error("Unexpected error when trying to query local match history")
+        return
+
     for match in matches:
         if match['gameMode'] == 'CLASSIC' and match['gameType'] == 'CUSTOM_GAME' and match['endOfGameResult'] == 'GameComplete':
             riotGameIds.append(match['gameId'])
@@ -46,11 +51,10 @@ def scrape_match_data() -> None:
     # get each match data
     retrieved_game = False
     for riotGameId in riotGameIds[::-1]:
-        matchId = len(os.listdir(MATCHES_PATH)) + 1
-        matchFileName = f"{MATCHES_PATH}/match-{riotGameId}.json"
+        query_results = matches_table.find_one({"gameId": riotGameId})
         
-        if not os.path.exists(matchFileName):
-            logging.info(f"Getting data for riotGameId: {riotGameId}, matchId: {matchId}")
+        if query_results is None:
+            logging.info(f"Getting data for riotGameId: {riotGameId}")
             response = requests.get(
                 connector.url + GAMES_ENDPOINT + str(riotGameId),
                 headers=headers,
@@ -58,13 +62,15 @@ def scrape_match_data() -> None:
             )
             retrieved_game = True
             
-            match = json.dumps(response.json(), indent=4)
-            with open(matchFileName, 'w') as matchFile:
-                matchFile.write(match)
+            matches_table.insert_one(response.json())
     
     if not retrieved_game:
         logging.info("No new games")
 
 
 if __name__ == "__main__":
-    scrape_match_data()
+    config = load_config(CONFIG_PATH)
+
+    db = get_database_connection(config["DB_CONNECTION_STRING"])
+    scrape_match_data(db)
+

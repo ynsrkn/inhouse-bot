@@ -1,7 +1,7 @@
-bot-env/
 __pycache__/
 matches/
 .*/
 
 riotgames.pem
-secrets.json
+config.yaml
+local_scripts/
