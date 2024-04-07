@@ -1,6 +1,7 @@
 from lcu_connector import Connector
 from classes.ClientNotOpenException import ClientNotOpenException
-from utils import set_logging_config, get_database_connection
+from utils import load_config, get_database_connection
+from constants import CONFIG_PATH
 
 import requests
 import urllib3
@@ -42,7 +43,7 @@ def scrape_match_data(db: Database) -> None:
     except KeyError:
         logging.error("Unexpected error when trying to query local match history")
         return
-    
+
     for match in matches:
         if match['gameMode'] == 'CLASSIC' and match['gameType'] == 'CUSTOM_GAME' and match['endOfGameResult'] == 'GameComplete':
             riotGameIds.append(match['gameId'])
@@ -68,8 +69,8 @@ def scrape_match_data(db: Database) -> None:
 
 
 if __name__ == "__main__":
-    set_logging_config()
+    config = load_config(CONFIG_PATH)
 
-    db = get_database_connection()
-    scrape_match_data()
+    db = get_database_connection(config["DB_CONNECTION_STRING"])
+    scrape_match_data(db)
 

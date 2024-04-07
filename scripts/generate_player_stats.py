@@ -1,13 +1,12 @@
-from constants import champ_id_map
+from constants import CONFIG_PATH, champ_id_map
 from classes.PlayerGameStats import PlayerGameStats
 from classes.PlayerHistoricalStats import PlayerHistoricalStats
 from classes.Game import Game
-from utils import set_logging_config, get_database_connection
+from utils import load_config, get_database_connection
 
 import trueskill
 import itertools
 import math
-import logging
 from pymongo.database import Database
 
 
@@ -100,9 +99,9 @@ def load_games(db: Database) -> list[Game]:
 
 
 if __name__ == "__main__":
-    set_logging_config()
+    config = load_config(CONFIG_PATH)
 
-    db = get_database_connection()
+    db = get_database_connection(config['DB_CONNECTION_STRING'])
     games = load_games(db)
     
     playerStats, predictions = track_player_stats(games)

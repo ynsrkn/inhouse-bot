@@ -1,5 +1,5 @@
 from generate_player_stats import track_player_stats, load_games
-from utils import chunks, set_logging_config, get_database_connection
+from utils import chunks, load_config, set_logging_config, get_database_connection
 from scrape_match_data import scrape_match_data
 from constants import CONFIG_PATH
 
@@ -16,19 +16,17 @@ from discord.ext import commands, pages
 from discord.commands import option
 from discord.utils import basic_autocomplete
 import logging
-import yaml
 from pymongo.database import Database
 
 bot = commands.Bot()
 
 # load config
-with open(CONFIG_PATH, 'r') as config_fh:
-    config = yaml.safe_load(config_fh)
+config = load_config(CONFIG_PATH)
 
 GUILD_IDS = config['GUILD_IDS']
 
 # open local database connection
-db: Database = get_database_connection(config)
+db: Database = get_database_connection(config["DB_CONNECTION_STRING"])
 
 # stats object
 stats: dict[PlayerGameStats] = None
