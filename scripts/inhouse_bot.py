@@ -107,11 +107,8 @@ async def get_profile(ctx: discord.ApplicationContext, player_name: str):
             # next line
             body += " " * 16  # spacer
             body += f"{champ.avgKills}/{champ.avgDeaths}/{champ.avgAssists}".ljust(15)
-            body += (
-                f"{champ.gamesPlayed} game{'s' if champ.gamesPlayed > 1 else ''}".rjust(
-                    8
-                )
-            )
+            plural = "s" if champ.gamesPlayed > 1 else ""
+            body += f"{champ.gamesPlayed} game{plural}".rjust(8)
             body += "\n"
             rank += 1
         body += "```"
@@ -133,15 +130,11 @@ async def get_profile(ctx: discord.ApplicationContext, player_name: str):
         )
         body = "```"
         for match in chunk:
-            match_stats = match.gameStats
-            body += str(match_stats.gameId).ljust(5)
-            body += f"{'Victory' if match_stats.win else 'Defeat':10}"
-            body += f"{match_stats.championName:13}"
-            body += (
-                f"{match_stats.kills}/{match_stats.deaths}/{match_stats.assists}".ljust(
-                    10
-                )
-            )
+            mstats = match.gameStats
+            body += str(mstats.gameId).ljust(5)
+            body += f"{'Victory' if mstats.win else 'Defeat':10}"
+            body += f"{mstats.championName:13}"
+            body += f"{mstats.kills}/{mstats.deaths}/{mstats.assists}".ljust(10)
             body += f"{'+' if match.mmrDelta >= 0 else ''}{match.mmrDelta:.0f}".ljust(6)
             body += "\n"
         body += "```"
