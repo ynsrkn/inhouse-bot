@@ -35,7 +35,7 @@ def scrape_match_data(db: Database) -> None:
     response = requests.get(
         connector.url + MATCHES_ENDPOINT, headers=headers, verify=False
     )
-    riotGameIds = []
+    riot_game_ids = []
     # get riotGameIds of inhouse custom games
     try:
         matches = response.json()["games"]["games"]
@@ -49,17 +49,17 @@ def scrape_match_data(db: Database) -> None:
             and match["gameType"] == "CUSTOM_GAME"
             and match["endOfGameResult"] == "GameComplete"
         ):
-            riotGameIds.append(match["gameId"])
+            riot_game_ids.append(match["gameId"])
 
     # get each match data
     retrieved_game = False
-    for riotGameId in riotGameIds[::-1]:
-        query_results = matches_table.find_one({"gameId": riotGameId})
+    for riot_game_id in riot_game_ids[::-1]:
+        query_results = matches_table.find_one({"gameId": riot_game_id})
 
         if query_results is None:
-            logging.info(f"Getting data for riotGameId: {riotGameId}")
+            logging.info(f"Getting data for riotGameId: {riot_game_id}")
             response = requests.get(
-                connector.url + GAMES_ENDPOINT + str(riotGameId),
+                connector.url + GAMES_ENDPOINT + str(riot_game_id),
                 headers=headers,
                 verify=False,
             )

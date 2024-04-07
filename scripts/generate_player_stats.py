@@ -46,11 +46,11 @@ def track_player_stats(
         team_mmrs = {}
         for player_game_stats in team:
             player_name = player_game_stats.playerName
-            playerDisplayName = player_game_stats.playerDisplayName
+            player_display_name = player_game_stats.playerDisplayName
 
             if player_name not in player_stats:
                 player_stats[player_name] = PlayerHistoricalStats(
-                    player_name, playerDisplayName
+                    player_name, player_display_name
                 )
 
             team_mmrs[player_name] = player_stats[player_name].mmr
@@ -58,33 +58,33 @@ def track_player_stats(
 
     for game in games:
         # get team mmrs for rating groups
-        ratingGroups = (__get_team_mmrs(game.team1), __get_team_mmrs(game.team2))
+        rating_groups = (__get_team_mmrs(game.team1), __get_team_mmrs(game.team2))
         ranks = [0, 1] if game.team1[0].win else [1, 0]
 
         # predict team1 win probability
-        gamePrediction = __calculate_win_probability(ratingGroups)
-        game_predictions.append(gamePrediction)
+        game_prediction = __calculate_win_probability(rating_groups)
+        game_predictions.append(game_prediction)
 
         # update trueskill based on match result
-        updatedRatingGroups = trueskill.rate(ratingGroups, ranks)
+        updated_rating_groups = trueskill.rate(rating_groups, ranks)
 
         # keep track of mmr deltas
-        playerMmrDeltas = {}
+        player_mmr_deltas = {}
 
         # update player stats with new ratings
-        for teamGroup in updatedRatingGroups:
-            for playerName, updatedMMR in teamGroup.items():
-                mmrDelta = updatedMMR.mu - player_stats[playerName].mmr.mu
-                player_stats[playerName].mmr = updatedMMR
-                playerMmrDeltas[playerName] = mmrDelta
+        for team_group in updated_rating_groups:
+            for player_name, updated_mmr in team_group.items():
+                mmr_delta = updated_mmr.mu - player_stats[player_name].mmr.mu
+                player_stats[player_name].mmr = updated_mmr
+                player_mmr_deltas[player_name] = mmr_delta
 
         # handle in game stat updating
-        for playerGameStats in game.players:
-            playerName = playerGameStats.playerName
+        for player_game_stats in game.players:
+            player_name = player_game_stats.playerName
 
             # guaranteed playerName is in stats in mmr loop
-            player_stats[playerName].add_game(
-                game, playerGameStats, playerMmrDeltas[playerName]
+            player_stats[player_name].add_game(
+                game, player_game_stats, player_mmr_deltas[player_name]
             )
 
     return player_stats, game_predictions

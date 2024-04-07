@@ -132,12 +132,14 @@ async def get_profile(ctx: discord.ApplicationContext, player_name: str):
         )
         body = "```"
         for match in chunk:
-            matchStats = match.gameStats
-            body += str(matchStats.gameId).ljust(5)
-            body += f"{'Victory' if matchStats.win else 'Defeat':10}"
-            body += f"{matchStats.championName:13}"
+            match_stats = match.gameStats
+            body += str(match_stats.gameId).ljust(5)
+            body += f"{'Victory' if match_stats.win else 'Defeat':10}"
+            body += f"{match_stats.championName:13}"
             body += (
-                f"{matchStats.kills}/{matchStats.deaths}/{matchStats.assists}".ljust(10)
+                f"{match_stats.kills}/{match_stats.deaths}/{match_stats.assists}".ljust(
+                    10
+                )
             )
             body += f"{'+' if match.mmrDelta >= 0 else ''}{match.mmrDelta:.0f}".ljust(6)
             body += "\n"
@@ -148,6 +150,8 @@ async def get_profile(ctx: discord.ApplicationContext, player_name: str):
         match_hist_pages.append(page_embed)
 
     page_list = []
+    # display pages equal to the max between champions and match history
+    # and show the last page of the shorter list
     for i in range(max(len(champions_pages), len(match_hist_pages))):
         pg = [profile_embed]
         if i < len(champions_pages):
