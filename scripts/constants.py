@@ -2,14 +2,14 @@ CONFIG_PATH = "../config.yaml"
 
 champ_id_map = {
     266: "Aatrox",
-    103: "Ahri",        
-    84: "Akali",        
-    166: "Akshan",      
-    12: "Alistar",      
-    32: "Amumu",        
-    34: "Anivia",       
+    103: "Ahri",
+    84: "Akali",
+    166: "Akshan",
+    12: "Alistar",
+    32: "Amumu",
+    34: "Anivia",
     1: "Annie",
-    523: "Aphelios",    
+    523: "Aphelios",
     22: "Ashe",
     136: "Aurelion Sol",
     268: "Azir",
@@ -167,5 +167,5 @@ champ_id_map = {
     115: "Ziggs",
     26: "Zilean",
     142: "Zoe",
-    143: "Zyra"
+    143: "Zyra",
 }

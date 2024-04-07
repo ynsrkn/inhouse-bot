@@ -1,5 +1,6 @@
 from classes.PlayerGameStats import PlayerGameStats
 
+
 class ChampionStats:
     def __init__(self, championName: str) -> None:
         self.championName: str = championName
@@ -14,7 +15,6 @@ class ChampionStats:
         self.avgDeaths: int = 0
         self.avgAssists: int = 0
         self.avgkda: float = 0
-
 
     def add_game(self, game_stats: PlayerGameStats):
         self.gamesPlayed += 1
@@ -36,7 +36,6 @@ class ChampionStats:
             self.avgkda = self.avgKills + self.avgAssists
         else:
             self.avgkda = round((self.avgKills + self.avgAssists) / self.avgDeaths, 2)
-
 
     def __repr__(self) -> str:
         return f"{self.championName}: {self.gamesPlayed} games ({self.winrate}% WR)"
