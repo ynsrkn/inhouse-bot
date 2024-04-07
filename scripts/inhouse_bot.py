@@ -24,6 +24,7 @@ bot = commands.Bot()
 config = load_config(CONFIG_PATH)
 
 GUILD_IDS = config["GUILD_IDS"]
+GUILD_IDS = config["GUILD_IDS"]
 
 # open local database connection
 db: Database = get_database_connection(config["DB_CONNECTION_STRING"])

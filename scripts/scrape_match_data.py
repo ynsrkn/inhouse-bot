@@ -17,7 +17,7 @@ GAMES_ENDPOINT = "/lol-match-history/v1/games/"
 
 def scrape_match_data(db: Database) -> None:
     """
-    Scrape custom game data from an open local client's match history and inserts into DB
+    Scrapes custom game data from an open local client's match history and inserts into DB
     """
     try:
         connector = Connector(start=True)
