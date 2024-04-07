@@ -305,7 +305,8 @@ async def get_versus(ctx: discord.ApplicationContext, player1: str, player2: str
     name="match_details",
     description="Return a detailed description of a specific match. Returns most recent game if id not specified.",
 )
-async def match_details(ctx, match_id: discord.Option(int) = -1):
+@option("match_id")
+async def match_details(ctx, match_id: int = -1):
     logging.info(f"Received MATCH_DETAILS request for match_id: {match_id}")
 
     # if match_id is not specified return most recent game
