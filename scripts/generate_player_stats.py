@@ -1,13 +1,14 @@
-from constants import champ_id_map, MATCHES_PATH
+from constants import champ_id_map
 from classes.PlayerGameStats import PlayerGameStats
 from classes.PlayerHistoricalStats import PlayerHistoricalStats
 from classes.Game import Game
+from utils import set_logging_config, get_database_connection
 
-import os
-import json
 import trueskill
 import itertools
 import math
+import logging
+from pymongo.database import Database
 
 
 # setup trueskill global environment
@@ -82,30 +83,29 @@ def track_player_stats(games: list[Game]) -> tuple[dict[str, PlayerHistoricalSta
     return playerStats, gamePredictions
 
 
-def load_games(dir_path: str) -> list[Game]:
+def load_games(db: Database) -> list[Game]:
     """
-        Loads game JSON data from directory dir_path and parses them into Game objects
+        Loads game data from database and parses them into Game objects
     """
+    matches_table = db['matches']
+
+    # get all games, sort asc
+    query_results = matches_table.find().sort({"gameId": 1})
+
     games = []
-    for i, matchFileName in enumerate(os.listdir(dir_path)):
-        data = {}
-        with open(f"{dir_path}/{matchFileName}", 'r') as fh:
-            data = json.load(fh)
-        
-        games.append(Game(i + 1, data))
-    
-    games.sort(key=lambda x: x.id)
+    for i, match_data in enumerate(query_results):
+        games.append(Game(i + 1, match_data))
 
     return games
 
 
 if __name__ == "__main__":
-    games = load_games(MATCHES_PATH)
+    set_logging_config()
+
+    db = get_database_connection()
+    games = load_games(db)
     
     playerStats, predictions = track_player_stats(games)
-
-    for game in games:
-        print(game)
 
     for playerName, stats in sorted(playerStats.items(), key=lambda x: -x[1].mmr.mu):
         print(stats)

@@ -1,5 +1,4 @@
-MATCHES_PATH = "../matches"
-SECRETS_PATH = "../secrets.json"
+CONFIG_PATH = "../config.yaml"
 
 champ_id_map = {
     266: "Aatrox",
