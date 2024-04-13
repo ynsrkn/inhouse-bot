@@ -426,6 +426,10 @@ async def register(ctx: discord.ApplicationContext, riot_name: str, riot_tag: st
         f"Received REGISTER request author={ctx.author.name}, {riot_name=}, {riot_tag=}"
     )
 
+    # strip leading # in case users input it with their tag
+    if len(riot_tag) > 0 and riot_tag[0] == "#":
+        riot_tag = riot_tag[1:]
+
     # validate name and tag
     if (
         len(riot_name) < 3
