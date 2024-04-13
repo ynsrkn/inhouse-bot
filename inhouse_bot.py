@@ -1,15 +1,20 @@
-from generate_player_stats import track_player_stats, load_games
-from utils import chunks, load_config, set_logging_config, get_database_connection
-from scrape_match_data import scrape_match_data
-from constants import CONFIG_PATH
+from scripts.generate_player_stats import track_player_stats, load_games
+from scripts.utils import (
+    chunks,
+    load_config,
+    set_logging_config,
+    get_database_connection,
+)
+from scripts.scrape_match_data import scrape_match_data
+from scripts.constants import CONFIG_PATH
 
-from classes.Match import Match
-from classes.Game import Game
-from classes.PlayerGameStats import PlayerGameStats
-from classes.PlayerHistoricalStats import PlayerHistoricalStats
-from classes.Teammate import Teammate
-from classes.ChampionStats import ChampionStats
-from classes.ClientNotOpenException import ClientNotOpenException
+from scripts.classes.Match import Match
+from scripts.classes.Game import Game
+from scripts.classes.PlayerGameStats import PlayerGameStats
+from scripts.classes.PlayerHistoricalStats import PlayerHistoricalStats
+from scripts.classes.Teammate import Teammate
+from scripts.classes.ChampionStats import ChampionStats
+from scripts.classes.ClientNotOpenException import ClientNotOpenException
 
 import discord
 from discord.ext import commands, pages
@@ -29,7 +34,7 @@ GUILD_IDS = config["GUILD_IDS"]
 db: Database = get_database_connection(config["DB_CONNECTION_STRING"])
 
 # stats object
-stats: dict[PlayerGameStats] = None
+stats: dict[str, PlayerGameStats] = None
 # match history
 match_history: list[Match] = None
 # discord -> riot id mappings
@@ -40,7 +45,10 @@ async def __get_player_list(ctx: discord.AutocompleteContext):
     """
     Returns a lexicographically sorted list of player display names for autocompleting
     """
-    return sorted(list(map(lambda x: x.playerDisplayName, stats.values())))
+    names = list(map(lambda x: x.name, stats.values()))
+    names.sort(key=lambda x: x.name)
+    display_names = list(map(lambda x: x.displayName, names))
+    return display_names
 
 
 @bot.slash_command(
@@ -74,7 +82,7 @@ async def get_profile(ctx: discord.ApplicationContext, player_name: str = None):
 
     MIN_EMBED_WIDTH = 48
     profile_embed = discord.Embed(
-        title=f"{p_stats.playerDisplayName} Profile", description="⎯" * MIN_EMBED_WIDTH
+        title=f"{p_stats.name.displayName} Profile", description="⎯" * MIN_EMBED_WIDTH
     )
 
     profile_embed.add_field(
@@ -201,7 +209,7 @@ async def get_leaderboard(ctx: discord.ApplicationContext):
         table_body = "```"
         for row in rows:
             table_body += f"{rank}".ljust(5)
-            table_body += f"{row.playerDisplayName:18}"
+            table_body += f"{row.name.displayName:18}"
             table_body += f"{row.mmr.mu:<6.0f}"
             table_body += f"{row.wins:<6}{row.losses:<7}{row.winrate:>3}%"
             table_body += "\n"
@@ -258,15 +266,20 @@ async def get_synergy(ctx: discord.ApplicationContext, player1: str, player2: st
         return
 
     embed = discord.Embed(
-        title=f"Synergy between `{p_stats.playerDisplayName}` and `{p2_stats.playerDisplayName}`"
+        title=f"Synergy between `{p_stats.name.displayName}` and `{p2_stats.name.displayName}`"
     )
 
     body = ""
-    body += f"Thats **{abs(p_stats.winrate - synergy.winrate)}% {'higher' if synergy.winrate >= p_stats.winrate else 'lower'}** than normal for `{p_stats.playerDisplayName}` "
-    body += f"and **{abs(p2_stats.winrate - p2_synergy.winrate)}% {'higher' if p2_synergy.winrate >= p2_stats.winrate else 'lower'}** than normal for `{p2_stats.playerDisplayName}`.\n"
+
+    higher_lower = "higher" if synergy.winrate >= p_stats.winrate else "lower"
+    body += f"Thats **{abs(p_stats.winrate - synergy.winrate)}% {higher_lower}** than normal for `{p_stats.name.displayName}` "
+
+    higher_lower = "higher" if p2_synergy.winrate >= p2_stats.winrate else "lower"
+    body += f"and **{abs(p2_stats.winrate - p2_synergy.winrate)}% {higher_lower}** than normal for `{p2_stats.name.displayName}`.\n"
+
     body += f"**{synergy.wins}W {synergy.losses}L**"
     embed.add_field(
-        name=f"`{p_stats.playerDisplayName}` wins `{synergy.winrate}%` of the time when playing with `{p2_stats.playerDisplayName}`.",
+        name=f"`{p_stats.name.displayName}` wins `{synergy.winrate}%` of the time when playing with `{p2_stats.name.displayName}`.",
         value=body,
         inline=False,
     )
@@ -303,14 +316,14 @@ async def get_versus(ctx: discord.ApplicationContext, player1: str, player2: str
         return
 
     embed = discord.Embed(
-        title=f"Versus between `{p_stats.playerDisplayName}` and `{versus.playerDisplayName}`"
+        title=f"Versus between `{p_stats.name.displayName}` and `{versus.name.displayName}`"
     )
 
     body = ""
     body += f"Thats {abs(p_stats.winrate - versus.winrate)}% {'higher' if versus.winrate >= p_stats.winrate else 'lower'} than normal.\n"
     body += f"**{versus.wins}W {versus.losses}L**"
     embed.add_field(
-        name=f"`{p_stats.playerDisplayName}` wins `{versus.winrate}%` of the time when playing against `{versus.playerDisplayName}`.",
+        name=f"`{p_stats.name.displayName}` wins `{versus.winrate}%` of the time when playing against `{versus.name.displayName}`.",
         value=body,
         inline=False,
     )
@@ -351,7 +364,7 @@ async def match_details(ctx: discord.ApplicationContext, match_id: int = -1):
     for name, team in [("BLUE", match_info.team1), ("RED", match_info.team2)]:
         body = "```"
         for player in team:
-            body += f"{player.playerDisplayName:16}"
+            body += f"{player.name.displayName:16}"
             body += f"{player.championName:13}"
             body += f"{player.kills}/{player.deaths}/{player.assists}".ljust(10)
             body += f"{player.cs:<6}"

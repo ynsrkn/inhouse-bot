@@ -1,6 +1,9 @@
+from scripts.classes.PlayerName import PlayerName
+
+
 class Teammate:
-    def __init__(self, playerDisplayName: str) -> None:
-        self.playerDisplayName = playerDisplayName
+    def __init__(self, name: PlayerName) -> None:
+        self.name = name
         self.wins = 0
         self.losses = 0
         self.gamesPlayed = 0

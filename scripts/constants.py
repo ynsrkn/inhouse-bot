@@ -1,4 +1,4 @@
-CONFIG_PATH = "../config.yaml"
+CONFIG_PATH = "config.yaml"
 
 champ_id_map = {
     266: "Aatrox",

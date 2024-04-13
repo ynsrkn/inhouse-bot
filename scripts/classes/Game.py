@@ -1,14 +1,17 @@
-from classes.PlayerGameStats import PlayerGameStats
+from scripts.classes.PlayerGameStats import PlayerGameStats
+from scripts.classes.PlayerName import PlayerName
 
 
 class Game:
     def __init__(self, gameId: int, raw_data: dict) -> None:
         self.id: int = gameId
-        self.pmap: dict[int, str] = {}
-        for participant in raw_data["participantIdentities"]:
-            self.pmap[participant["participantId"]] = participant["player"][
-                "summonerName"
-            ]
+        self.pmap: dict[int, PlayerName] = {}
+        for p in raw_data["participantIdentities"]:
+            self.pmap[p["participantId"]] = PlayerName(
+                summonerName=p["player"]["summonerName"],
+                name=p["player"]["gameName"],
+                tag=p["player"]["tagLine"],
+            )
 
         self.team1: list[PlayerGameStats] = []
         self.team2: list[PlayerGameStats] = []
