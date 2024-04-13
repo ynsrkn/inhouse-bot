@@ -24,7 +24,6 @@ bot = commands.Bot()
 config = load_config(CONFIG_PATH)
 
 GUILD_IDS = config["GUILD_IDS"]
-GUILD_IDS = config["GUILD_IDS"]
 
 # open local database connection
 db: Database = get_database_connection(config["DB_CONNECTION_STRING"])
@@ -33,6 +32,8 @@ db: Database = get_database_connection(config["DB_CONNECTION_STRING"])
 stats: dict[PlayerGameStats] = None
 # match history
 match_history: list[Match] = None
+# discord -> riot id mappings
+name_mappings: dict[str, tuple[str, str]] = None
 
 
 async def __get_player_list(ctx: discord.AutocompleteContext):
@@ -46,9 +47,25 @@ async def __get_player_list(ctx: discord.AutocompleteContext):
     name="profile", description="Get a summoners profile.", guild_ids=GUILD_IDS
 )
 @option("player_name", autocomplete=basic_autocomplete(__get_player_list))
-async def get_profile(ctx: discord.ApplicationContext, player_name: str):
+async def get_profile(ctx: discord.ApplicationContext, player_name: str = None):
 
-    logging.info(f"Received PROFILE request player_name={player_name}")
+    logging.info(f"Received PROFILE request {player_name=}, author={ctx.author.name}")
+
+    # player_name is optional if a discord -> riot id mapping exists
+    if player_name is None:
+        riot_id = name_mappings.get(ctx.author.name)
+        if riot_id is None:
+            await ctx.respond(
+                embed=discord.embed(
+                    title=(
+                        f"{ctx.author.name} does not have a corresponding Riot Id attached. \
+                        Specify the player_name field or use the /register command and try again."
+                    )
+                )
+            )
+            return
+
+        player_name = riot_id[0]
 
     p_stats = stats.get(player_name.lower())
     if p_stats is None:
@@ -306,7 +323,7 @@ async def get_versus(ctx: discord.ApplicationContext, player1: str, player2: str
     description="Return a detailed description of a specific match. Returns most recent game if id not specified.",
 )
 @option("match_id")
-async def match_details(ctx, match_id: int = -1):
+async def match_details(ctx: discord.ApplicationContext, match_id: int = -1):
     logging.info(f"Received MATCH_DETAILS request for match_id: {match_id}")
 
     # if match_id is not specified return most recent game
@@ -368,7 +385,7 @@ def __update():
 
 
 @bot.slash_command(name="update", description="Triggers a stats recalc.")
-async def update(ctx):
+async def update(ctx: discord.ApplicationContext):
     await ctx.defer(ephemeral=False)
 
     logging.info("Received UPDATE request")
@@ -386,6 +403,64 @@ async def update(ctx):
     await ctx.respond(embed=discord.Embed(title="Stats updated!"), ephemeral=False)
 
 
+@bot.slash_command(
+    name="register", description="Register your discord user with a riot id."
+)
+async def register(ctx: discord.ApplicationContext, riot_name: str, riot_tag: str):
+    await ctx.defer(ephemeral=False)
+
+    logging.info(
+        f"Received REGISTER request author={ctx.author.name}, {riot_name=}, {riot_tag=}"
+    )
+
+    # validate name and tag
+    if (
+        len(riot_name) < 3
+        or len(riot_name) > 16
+        or len(riot_tag) < 3
+        or len(riot_tag) > 5
+    ):
+        await ctx.respond(
+            embed=discord.Embed(
+                title=(
+                    "Register failed: Invalid name or tag. Names must  \
+                       be between 3 and 16 characters, tags between 3 and 5."
+                )
+            )
+        )
+        return
+
+    mapping = {
+        "discord_name": ctx.author.name,
+        "riot_name": riot_name,
+        "riot_tag": riot_tag,
+    }
+
+    db["discord-riot-id-mappings"].replace_one(
+        filter={"discord_name": ctx.author.name}, replacement=mapping, upsert=True
+    )
+
+    await ctx.respond(
+        embed=discord.Embed(
+            title=f"Successfully registered {ctx.author.name} as {riot_name}#{riot_tag}"
+        )
+    )
+
+
+def __fetch_name_mappings(db: Database) -> dict[str, tuple[str, str]]:
+    """
+    Pull discord username -> riot id + tagline mappings from mongoDB database and return a dict of them.
+    Discord usernames are guaranteed at the database level to be unique.
+    """
+    mappings = {}
+
+    query_results = db["discord-riot-id-mappings"].find()
+    for mapping in query_results:
+        mappings[mapping["discord_name"]] = (mapping["riot_name"], mapping["riot_tag"])
+
+    return mappings
+
+
 """
     App entry point
 """
@@ -400,6 +475,9 @@ if __name__ == "__main__":
         __update()
     except ClientNotOpenException:
         logging.info("Client not open")
+
+    # get discord -> riot id mappings from db
+    name_mappings = __fetch_name_mappings(db)  # global
 
     logging.info("Populated objects; Ready!")
 
