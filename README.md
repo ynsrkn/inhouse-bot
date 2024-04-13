@@ -19,4 +19,4 @@ GUILD_IDS: [123, 456]
 
 - Open and login to the `League of Legends` client. It needs to be open to scrape local custom game match history data.
 
-- From the project home directory run `python inhouse_bot.py` to start the Discord bot.
+- From the project root directory run `python inhouse_bot.py` to start the Discord bot.
