@@ -1,4 +1,4 @@
-from classes.PlayerGameStats import PlayerGameStats
+from scripts.classes.PlayerGameStats import PlayerGameStats
 
 
 class MatchHistoryMatch:

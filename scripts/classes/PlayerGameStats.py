@@ -1,12 +1,11 @@
-from constants import champ_id_map
+from scripts.constants import champ_id_map
+from scripts.classes.PlayerName import PlayerName
 
 
 class PlayerGameStats:
     def __init__(self, raw_stats, pmap, gameId) -> None:
         self.gameId: int = gameId
-        self.playerId: int = raw_stats["participantId"]
-        self.playerName: str = pmap[self.playerId].lower()
-        self.playerDisplayName: str = pmap[self.playerId]
+        self.name: PlayerName = pmap[raw_stats["participantId"]]
         self.championId: int = raw_stats["championId"]
         self.championName: str = champ_id_map[self.championId]
         self.cs: int = (

@@ -3,11 +3,11 @@ import math
 import trueskill
 from pymongo.database import Database
 
-from constants import CONFIG_PATH
-from classes.PlayerGameStats import PlayerGameStats
-from classes.PlayerHistoricalStats import PlayerHistoricalStats
-from classes.Game import Game
-from utils import load_config, get_database_connection
+from scripts.constants import CONFIG_PATH
+from scripts.classes.PlayerGameStats import PlayerGameStats
+from scripts.classes.PlayerHistoricalStats import PlayerHistoricalStats
+from scripts.classes.Game import Game
+from scripts.utils import load_config, get_database_connection
 
 
 # setup trueskill global environment
@@ -45,15 +45,12 @@ def track_player_stats(
     def __get_team_mmrs(team: list[PlayerGameStats]):
         team_mmrs = {}
         for player_game_stats in team:
-            player_name = player_game_stats.playerName
-            player_display_name = player_game_stats.playerDisplayName
+            name = player_game_stats.name
 
-            if player_name not in player_stats:
-                player_stats[player_name] = PlayerHistoricalStats(
-                    player_name, player_display_name
-                )
+            if name.name not in player_stats:
+                player_stats[name.name] = PlayerHistoricalStats(name)
 
-            team_mmrs[player_name] = player_stats[player_name].mmr
+            team_mmrs[name.name] = player_stats[name.name].mmr
         return team_mmrs
 
     for game in games:
@@ -80,7 +77,7 @@ def track_player_stats(
 
         # handle in game stat updating
         for player_game_stats in game.players:
-            player_name = player_game_stats.playerName
+            player_name = player_game_stats.name.name
 
             # guaranteed playerName is in stats in mmr loop
             player_stats[player_name].add_game(

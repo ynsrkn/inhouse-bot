@@ -1,15 +1,20 @@
-from generate_player_stats import track_player_stats, load_games
-from utils import chunks, load_config, set_logging_config, get_database_connection
-from scrape_match_data import scrape_match_data
-from constants import CONFIG_PATH
+from scripts.generate_player_stats import track_player_stats, load_games
+from scripts.utils import (
+    chunks,
+    load_config,
+    set_logging_config,
+    get_database_connection,
+)
+from scripts.scrape_match_data import scrape_match_data
+from scripts.constants import CONFIG_PATH
 
-from classes.Match import Match
-from classes.Game import Game
-from classes.PlayerGameStats import PlayerGameStats
-from classes.PlayerHistoricalStats import PlayerHistoricalStats
-from classes.Teammate import Teammate
-from classes.ChampionStats import ChampionStats
-from classes.ClientNotOpenException import ClientNotOpenException
+from scripts.classes.Match import Match
+from scripts.classes.Game import Game
+from scripts.classes.PlayerGameStats import PlayerGameStats
+from scripts.classes.PlayerHistoricalStats import PlayerHistoricalStats
+from scripts.classes.Teammate import Teammate
+from scripts.classes.ChampionStats import ChampionStats
+from scripts.classes.ClientNotOpenException import ClientNotOpenException
 
 import discord
 from discord.ext import commands, pages
@@ -24,31 +29,51 @@ bot = commands.Bot()
 config = load_config(CONFIG_PATH)
 
 GUILD_IDS = config["GUILD_IDS"]
-GUILD_IDS = config["GUILD_IDS"]
 
 # open local database connection
 db: Database = get_database_connection(config["DB_CONNECTION_STRING"])
 
 # stats object
-stats: dict[PlayerGameStats] = None
+stats: dict[str, PlayerGameStats] = None
 # match history
 match_history: list[Match] = None
+# discord -> riot id mappings
+name_mappings: dict[str, tuple[str, str]] = None
 
 
 async def __get_player_list(ctx: discord.AutocompleteContext):
     """
     Returns a lexicographically sorted list of player display names for autocompleting
     """
-    return sorted(list(map(lambda x: x.playerDisplayName, stats.values())))
+    names = list(map(lambda x: x.name, stats.values()))
+    names.sort(key=lambda x: x.name)
+    display_names = list(map(lambda x: x.displayName, names))
+    return display_names
 
 
 @bot.slash_command(
     name="profile", description="Get a summoners profile.", guild_ids=GUILD_IDS
 )
 @option("player_name", autocomplete=basic_autocomplete(__get_player_list))
-async def get_profile(ctx: discord.ApplicationContext, player_name: str):
+async def get_profile(ctx: discord.ApplicationContext, player_name: str = None):
 
-    logging.info(f"Received PROFILE request player_name={player_name}")
+    logging.info(f"Received PROFILE request {player_name=}, author={ctx.author.name}")
+
+    # player_name is optional if a discord -> riot id mapping exists
+    if player_name is None:
+        riot_id = name_mappings.get(ctx.author.name)
+        if riot_id is None:
+            await ctx.respond(
+                embed=discord.embed(
+                    title=(
+                        f"{ctx.author.name} does not have a corresponding Riot Id attached. \
+                        Specify the player_name field or use the /register command and try again."
+                    )
+                )
+            )
+            return
+
+        player_name = riot_id[0]
 
     p_stats = stats.get(player_name.lower())
     if p_stats is None:
@@ -57,7 +82,7 @@ async def get_profile(ctx: discord.ApplicationContext, player_name: str):
 
     MIN_EMBED_WIDTH = 48
     profile_embed = discord.Embed(
-        title=f"{p_stats.playerDisplayName} Profile", description="⎯" * MIN_EMBED_WIDTH
+        title=f"{p_stats.name.displayName} Profile", description="⎯" * MIN_EMBED_WIDTH
     )
 
     profile_embed.add_field(
@@ -184,7 +209,7 @@ async def get_leaderboard(ctx: discord.ApplicationContext):
         table_body = "```"
         for row in rows:
             table_body += f"{rank}".ljust(5)
-            table_body += f"{row.playerDisplayName:18}"
+            table_body += f"{row.name.displayName:18}"
             table_body += f"{row.mmr.mu:<6.0f}"
             table_body += f"{row.wins:<6}{row.losses:<7}{row.winrate:>3}%"
             table_body += "\n"
@@ -241,15 +266,20 @@ async def get_synergy(ctx: discord.ApplicationContext, player1: str, player2: st
         return
 
     embed = discord.Embed(
-        title=f"Synergy between `{p_stats.playerDisplayName}` and `{p2_stats.playerDisplayName}`"
+        title=f"Synergy between `{p_stats.name.displayName}` and `{p2_stats.name.displayName}`"
     )
 
     body = ""
-    body += f"Thats **{abs(p_stats.winrate - synergy.winrate)}% {'higher' if synergy.winrate >= p_stats.winrate else 'lower'}** than normal for `{p_stats.playerDisplayName}` "
-    body += f"and **{abs(p2_stats.winrate - p2_synergy.winrate)}% {'higher' if p2_synergy.winrate >= p2_stats.winrate else 'lower'}** than normal for `{p2_stats.playerDisplayName}`.\n"
+
+    higher_lower = "higher" if synergy.winrate >= p_stats.winrate else "lower"
+    body += f"Thats **{abs(p_stats.winrate - synergy.winrate)}% {higher_lower}** than normal for `{p_stats.name.displayName}` "
+
+    higher_lower = "higher" if p2_synergy.winrate >= p2_stats.winrate else "lower"
+    body += f"and **{abs(p2_stats.winrate - p2_synergy.winrate)}% {higher_lower}** than normal for `{p2_stats.name.displayName}`.\n"
+
     body += f"**{synergy.wins}W {synergy.losses}L**"
     embed.add_field(
-        name=f"`{p_stats.playerDisplayName}` wins `{synergy.winrate}%` of the time when playing with `{p2_stats.playerDisplayName}`.",
+        name=f"`{p_stats.name.displayName}` wins `{synergy.winrate}%` of the time when playing with `{p2_stats.name.displayName}`.",
         value=body,
         inline=False,
     )
@@ -286,14 +316,14 @@ async def get_versus(ctx: discord.ApplicationContext, player1: str, player2: str
         return
 
     embed = discord.Embed(
-        title=f"Versus between `{p_stats.playerDisplayName}` and `{versus.playerDisplayName}`"
+        title=f"Versus between `{p_stats.name.displayName}` and `{versus.name.displayName}`"
     )
 
     body = ""
     body += f"Thats {abs(p_stats.winrate - versus.winrate)}% {'higher' if versus.winrate >= p_stats.winrate else 'lower'} than normal.\n"
     body += f"**{versus.wins}W {versus.losses}L**"
     embed.add_field(
-        name=f"`{p_stats.playerDisplayName}` wins `{versus.winrate}%` of the time when playing against `{versus.playerDisplayName}`.",
+        name=f"`{p_stats.name.displayName}` wins `{versus.winrate}%` of the time when playing against `{versus.name.displayName}`.",
         value=body,
         inline=False,
     )
@@ -306,7 +336,7 @@ async def get_versus(ctx: discord.ApplicationContext, player1: str, player2: str
     description="Return a detailed description of a specific match. Returns most recent game if id not specified.",
 )
 @option("match_id")
-async def match_details(ctx, match_id: int = -1):
+async def match_details(ctx: discord.ApplicationContext, match_id: int = -1):
     logging.info(f"Received MATCH_DETAILS request for match_id: {match_id}")
 
     # if match_id is not specified return most recent game
@@ -334,7 +364,7 @@ async def match_details(ctx, match_id: int = -1):
     for name, team in [("BLUE", match_info.team1), ("RED", match_info.team2)]:
         body = "```"
         for player in team:
-            body += f"{player.playerDisplayName:16}"
+            body += f"{player.name.displayName:16}"
             body += f"{player.championName:13}"
             body += f"{player.kills}/{player.deaths}/{player.assists}".ljust(10)
             body += f"{player.cs:<6}"
@@ -368,7 +398,7 @@ def __update():
 
 
 @bot.slash_command(name="update", description="Triggers a stats recalc.")
-async def update(ctx):
+async def update(ctx: discord.ApplicationContext):
     await ctx.defer(ephemeral=False)
 
     logging.info("Received UPDATE request")
@@ -386,6 +416,64 @@ async def update(ctx):
     await ctx.respond(embed=discord.Embed(title="Stats updated!"), ephemeral=False)
 
 
+@bot.slash_command(
+    name="register", description="Register your discord user with a riot id."
+)
+async def register(ctx: discord.ApplicationContext, riot_name: str, riot_tag: str):
+    await ctx.defer(ephemeral=False)
+
+    logging.info(
+        f"Received REGISTER request author={ctx.author.name}, {riot_name=}, {riot_tag=}"
+    )
+
+    # validate name and tag
+    if (
+        len(riot_name) < 3
+        or len(riot_name) > 16
+        or len(riot_tag) < 3
+        or len(riot_tag) > 5
+    ):
+        await ctx.respond(
+            embed=discord.Embed(
+                title=(
+                    "Register failed: Invalid name or tag. Names must  \
+                       be between 3 and 16 characters, tags between 3 and 5."
+                )
+            )
+        )
+        return
+
+    mapping = {
+        "discord_name": ctx.author.name,
+        "riot_name": riot_name,
+        "riot_tag": riot_tag,
+    }
+
+    db["discord-riot-id-mappings"].replace_one(
+        filter={"discord_name": ctx.author.name}, replacement=mapping, upsert=True
+    )
+
+    await ctx.respond(
+        embed=discord.Embed(
+            title=f"Successfully registered {ctx.author.name} as {riot_name}#{riot_tag}"
+        )
+    )
+
+
+def __fetch_name_mappings(db: Database) -> dict[str, tuple[str, str]]:
+    """
+    Pull discord username -> riot id + tagline mappings from mongoDB database and return a dict of them.
+    Discord usernames are guaranteed at the database level to be unique.
+    """
+    mappings = {}
+
+    query_results = db["discord-riot-id-mappings"].find()
+    for mapping in query_results:
+        mappings[mapping["discord_name"]] = (mapping["riot_name"], mapping["riot_tag"])
+
+    return mappings
+
+
 """
     App entry point
 """
@@ -400,6 +488,9 @@ if __name__ == "__main__":
         __update()
     except ClientNotOpenException:
         logging.info("Client not open")
+
+    # get discord -> riot id mappings from db
+    name_mappings = __fetch_name_mappings(db)  # global
 
     logging.info("Populated objects; Ready!")
 
