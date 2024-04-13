@@ -144,7 +144,7 @@ async def get_profile(ctx: discord.ApplicationContext, player_name: str = None):
 
     # Player Match History
 
-    PAGE_SIZE = 20
+    PAGE_SIZE = 12
     match_hist_pages = []
     for i, chunk in enumerate(chunks(p_stats.matchHistory, PAGE_SIZE)):
         page_embed = discord.Embed(
