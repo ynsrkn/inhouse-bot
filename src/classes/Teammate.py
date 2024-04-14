@@ -1,4 +1,4 @@
-from scripts.classes.PlayerName import PlayerName
+from src.classes.PlayerName import PlayerName
 
 
 class Teammate:

@@ -1,4 +1,4 @@
-from scripts.classes.PlayerGameStats import PlayerGameStats
+from src.classes.PlayerGameStats import PlayerGameStats
 
 
 class ChampionStats:

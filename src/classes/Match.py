@@ -1,4 +1,4 @@
-from scripts.generate_player_stats import Game
+from src.generate_player_stats import Game
 
 
 class Match:

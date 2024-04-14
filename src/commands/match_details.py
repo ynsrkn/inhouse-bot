@@ -1,6 +1,6 @@
 from discord import Embed
 
-from scripts.classes.Match import Match
+from src.classes.Match import Match
 
 
 def match_details(match_history: list[Match], match_id: int) -> Embed:

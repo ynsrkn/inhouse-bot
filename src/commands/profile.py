@@ -1,9 +1,9 @@
 from discord import Embed
 from discord.ext.pages import Paginator
 
-from scripts.classes.ChampionStats import ChampionStats
-from scripts.classes.PlayerGameStats import PlayerGameStats
-from scripts.utils import chunks
+from src.classes.ChampionStats import ChampionStats
+from src.classes.PlayerGameStats import PlayerGameStats
+from src.utils import chunks
 
 
 def profile(
