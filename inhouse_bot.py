@@ -12,7 +12,8 @@ from src.utils import (
     set_logging_config,
     get_database_connection,
 )
-from src.scrape_match_data import scrape_match_data
+
+# from src.scrape_match_data import scrape_match_data
 from src.constants import CONFIG_PATH
 from src.classes.Match import Match
 from src.classes.PlayerGameStats import PlayerGameStats
@@ -139,7 +140,7 @@ def __update():
     # requires client to be open locally
     logging.info("Scraping client")
 
-    scrape_match_data(db)
+    # scrape_match_data(db)
     matches = load_games(db)
     stats, predictions = track_player_stats(matches)
 
