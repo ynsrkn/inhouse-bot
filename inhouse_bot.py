@@ -6,7 +6,6 @@ from discord.utils import basic_autocomplete
 import logging
 from pymongo.database import Database
 
-from src.commands.create_lobby import create_lobby
 from src.generate_player_stats import track_player_stats, load_games
 from src.utils import (
     load_config,
