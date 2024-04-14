@@ -67,9 +67,6 @@ hooks:
     - location: scripts/install_dependencies.sh
       timeout: 300
       runas: root
-    - location: 
-      timeout:
-      runas:
 # During the ApplicationStart deployment lifecycle event, run the commands 
 #   in the script specified in "location".
   ApplicationStart:
