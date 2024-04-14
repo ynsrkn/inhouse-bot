@@ -1,5 +1,5 @@
-from scripts.classes.PlayerGameStats import PlayerGameStats
-from scripts.classes.PlayerName import PlayerName
+from src.classes.PlayerGameStats import PlayerGameStats
+from src.classes.PlayerName import PlayerName
 
 
 class Game:

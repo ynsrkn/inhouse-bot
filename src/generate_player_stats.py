@@ -3,11 +3,11 @@ import math
 import trueskill
 from pymongo.database import Database
 
-from scripts.constants import CONFIG_PATH
-from scripts.classes.PlayerGameStats import PlayerGameStats
-from scripts.classes.PlayerHistoricalStats import PlayerHistoricalStats
-from scripts.classes.Game import Game
-from scripts.utils import load_config, get_database_connection
+from src.constants import CONFIG_PATH
+from src.classes.PlayerGameStats import PlayerGameStats
+from src.classes.PlayerHistoricalStats import PlayerHistoricalStats
+from src.classes.Game import Game
+from src.utils import load_config, get_database_connection
 
 
 # setup trueskill global environment

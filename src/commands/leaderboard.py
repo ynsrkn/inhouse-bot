@@ -1,8 +1,8 @@
 from discord.ext.pages import Paginator
 from discord import Embed
 
-from scripts.classes.PlayerGameStats import PlayerGameStats
-from scripts.utils import chunks
+from src.classes.PlayerGameStats import PlayerGameStats
+from src.utils import chunks
 
 
 def leaderboard(stats: dict[str, PlayerGameStats]) -> Paginator:

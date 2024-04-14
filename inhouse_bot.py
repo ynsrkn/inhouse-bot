@@ -6,22 +6,23 @@ from discord.utils import basic_autocomplete
 import logging
 from pymongo.database import Database
 
-from scripts.generate_player_stats import track_player_stats, load_games
-from scripts.utils import (
+from src.commands.create_lobby import create_lobby
+from src.generate_player_stats import track_player_stats, load_games
+from src.utils import (
     load_config,
     set_logging_config,
     get_database_connection,
 )
-from scripts.scrape_match_data import scrape_match_data
-from scripts.constants import CONFIG_PATH
-from scripts.classes.Match import Match
-from scripts.classes.PlayerGameStats import PlayerGameStats
-from scripts.classes.ClientNotOpenException import ClientNotOpenException
-from scripts.commands.profile import profile
-from scripts.commands.leaderboard import leaderboard
-from scripts.commands.synergy import synergy
-from scripts.commands.versus import versus
-from scripts.commands.match_details import match_details
+from src.scrape_match_data import scrape_match_data
+from src.constants import CONFIG_PATH
+from src.classes.Match import Match
+from src.classes.PlayerGameStats import PlayerGameStats
+from src.classes.ClientNotOpenException import ClientNotOpenException
+from src.commands.profile import profile
+from src.commands.leaderboard import leaderboard
+from src.commands.synergy import synergy
+from src.commands.versus import versus
+from src.commands.match_details import match_details
 
 bot = commands.Bot()
 

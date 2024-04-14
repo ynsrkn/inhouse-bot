@@ -1,6 +1,6 @@
 from discord import Embed
 
-from scripts.classes.PlayerGameStats import PlayerGameStats
+from src.classes.PlayerGameStats import PlayerGameStats
 
 
 def versus(stats: dict[str, PlayerGameStats], player1: str, player2: str) -> Embed:

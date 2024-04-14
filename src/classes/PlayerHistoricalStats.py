@@ -1,9 +1,9 @@
-from scripts.classes.MatchHistoryMatch import MatchHistoryMatch
-from scripts.classes.PlayerGameStats import PlayerGameStats
-from scripts.classes.ChampionStats import ChampionStats
-from scripts.classes.Teammate import Teammate
-from scripts.classes.Game import Game
-from scripts.classes.PlayerName import PlayerName
+from src.classes.MatchHistoryMatch import MatchHistoryMatch
+from src.classes.PlayerGameStats import PlayerGameStats
+from src.classes.ChampionStats import ChampionStats
+from src.classes.Teammate import Teammate
+from src.classes.Game import Game
+from src.classes.PlayerName import PlayerName
 
 import trueskill
 

@@ -1,6 +1,6 @@
-from scripts.classes.ClientNotOpenException import ClientNotOpenException
-from scripts.utils import load_config, get_database_connection
-from scripts.constants import CONFIG_PATH
+from src.classes.ClientNotOpenException import ClientNotOpenException
+from src.utils import load_config, get_database_connection
+from src.constants import CONFIG_PATH
 
 from lcu_connector import Connector
 import requests

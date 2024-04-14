@@ -1,5 +1,5 @@
-from scripts.constants import champ_id_map
-from scripts.classes.PlayerName import PlayerName
+from src.constants import champ_id_map
+from src.classes.PlayerName import PlayerName
 
 
 class PlayerGameStats:
