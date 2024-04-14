@@ -71,10 +71,13 @@ class PlayerHistoricalStats:
         self.championStats[game_stats.championName].add_game(game_stats)
 
     def track_teammate_stats(
-        self, win: bool, teammates: dict[str, Teammate], opponents: dict[str, Teammate]
+        self,
+        win: bool,
+        teammates: list[PlayerGameStats],
+        opponents: list[PlayerGameStats],
     ):
         for teammate in teammates:
-            if teammate.name.name == self.name.name:
+            if teammate.name == self.name:
                 continue
 
             if self.teammates.get(teammate.name.name) is None:
@@ -98,7 +101,7 @@ class PlayerHistoricalStats:
         # track teammate and opponent information
         playerTeam = 1
         for player in game.team2:
-            if player.name.name == self.name.name:
+            if player.name == self.name:
                 playerTeam = 2
                 break
 
@@ -113,7 +116,7 @@ class PlayerHistoricalStats:
 
     def __repr__(self) -> str:
         res = ""
-        res += f"{self.name.name}".ljust(16)
+        res += f"{self.name.displayName}".ljust(16)
         res += f"{self.wins}W {self.losses}L ({self.winrate}% WR)".ljust(20)
         res += f"KDA: {self.avgKills} / {self.avgDeaths} / {self.avgAssists}".ljust(23)
         res += f"({self.totalkda})".ljust(10)
