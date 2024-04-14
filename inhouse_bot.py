@@ -221,17 +221,6 @@ async def cmd_register(ctx: ApplicationContext, riot_name: str, riot_tag: str):
     )
 
 
-@bot.slash_command(
-    name="create_lobby", description="As an admin, create a custom game lobby"
-)
-async def cmd_create_lobby(ctx: ApplicationContext):
-    logging.info(f"Received CREATE_LOBBY request author={ctx.author.name}")
-
-    response: Embed = create_lobby(ctx.author.name)
-
-    ctx.respond(embed=response)
-
-
 def __fetch_name_mappings(db: Database) -> dict[str, tuple[str, str]]:
     """
     Pull discord username -> riot id + tagline mappings from mongoDB database and return a dict of them.
